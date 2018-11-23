@@ -87,21 +87,21 @@ uint8_t parity(uint32_t x) {
     }
     return (parity % 2);
 }
- 
+
 byte RF_setup(void)
 {
 
   if (rf_chip == NULL) {
     if (sx1276_ops.probe()) {
-      rf_chip = &sx1276_ops;  
+      rf_chip = &sx1276_ops;
       Serial.println(F("SX1276 RFIC is detected."));
     } else if (nrf905_ops.probe()) {
       rf_chip = &nrf905_ops;
       Serial.println(F("NRF905 RFIC is detected."));
     } else {
-      Serial.println(F("WARNING! Neither SX1276 nor NRF905 RFIC is detected!"));    
+      Serial.println(F("WARNING! Neither SX1276 nor NRF905 RFIC is detected!"));
     }
-  }  
+  }
 
   /* "AUTO" freq. will set the plan upon very first valid GNSS fix */
   if (settings->band == RF_BAND_AUTO) {
@@ -197,8 +197,6 @@ void RF_loop()
                             (int32_t)(ThisAircraft.longitude * 600000));
         RF_ready = true;
       }
-    } else {
-      RF_ready = true;
     }
   }
 
@@ -263,7 +261,7 @@ bool RF_Receive(void)
   if (RF_ready && rf_chip) {
     rval = rf_chip->receive();
   }
-  
+
   return rval;
 }
 
@@ -485,7 +483,7 @@ bool sx1276_probe()
 
   hal_pin_rst(2); // configure RST pin floating!
   hal_waitUntil(os_getTime()+ms2osticks(5)); // wait 5ms
-  
+
   v = sx1276_readReg(SX1276_RegVersion);
 
   if (v == 0x12) {
@@ -496,7 +494,7 @@ bool sx1276_probe()
 
     return true;
   } else {
-    return false;  
+    return false;
   }
 }
 
@@ -834,7 +832,7 @@ void sx1276_tx(unsigned char *buf, size_t size, osjobcb_t func) {
     crc16 = 0xffff;  /* seed value */
     break;
   }
-  
+
   os_radio(RADIO_RST); // Stop RX first
   delay(1); // Wait a bit, without this os_radio below asserts, apparently because the state hasn't changed yet
 
