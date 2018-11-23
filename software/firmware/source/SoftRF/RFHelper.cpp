@@ -163,6 +163,7 @@ void RF_SetChannel(void)
     tm.Second = gnss.time.second();
 
     Time = makeTime(tm) + (gnss.time.age() - time_corr_neg + time_corr_pos)/ 1000;
+    Serial.print("RF_SetChannel:Time="); Serial.println(Time);
     break;
   }
 
@@ -176,15 +177,14 @@ void RF_SetChannel(void)
 
   uint8_t chan = RF_FreqPlan.getChannel(Time, Slot, OGN);
 
-#if DEBUG
-  Serial.print("Plan: "); Serial.println(RF_FreqPlan.Plan);
-  Serial.print("Slot: "); Serial.println(Slot);
-  Serial.print("OGN: "); Serial.println(OGN);
-  Serial.print("Channel: "); Serial.println(chan);
-#endif
-
   if (RF_ready && rf_chip) {
     rf_chip->channel(chan);
+    #if DEBUG
+      Serial.print("Plan: "); Serial.print(RF_FreqPlan.Plan);Serial.print(",");Serial.println(RF_FreqPlan.BaseFreq);
+      Serial.print("Slot: "); Serial.println(Slot);
+      Serial.print("OGN: "); Serial.println(OGN);
+      Serial.print("Channel: "); Serial.println(chan);
+    #endif
   }
 }
 
