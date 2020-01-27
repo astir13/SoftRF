@@ -1,6 +1,6 @@
 /*
  * TrafficHelper.cpp
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ static int8_t (*Alarm_Level)(ufo_t *, ufo_t *);
 
 /*
  * No any alarms issued by the firmware.
- * Rely on high-level flight management software.
+ * Rely upon high-level flight management software.
  */
 static int8_t Alarm_None(ufo_t *this_aircraft, ufo_t *fop)
 {
@@ -107,7 +107,7 @@ static int8_t Alarm_Vector(ufo_t *this_aircraft, ufo_t *fop)
 }
 
 /*
- * "Legacy" method is based on short history of 2D velocty vectors (NS/EW)
+ * "Legacy" method is based on short history of 2D velocity vectors (NS/EW)
  */
 static int8_t Alarm_Legacy(ufo_t *this_aircraft, ufo_t *fop)
 {
@@ -119,7 +119,7 @@ static int8_t Alarm_Legacy(ufo_t *this_aircraft, ufo_t *fop)
   return rval;
 }
 
-static void Traffic_Update(int ndx)
+void Traffic_Update(int ndx)
 {
   Container[ndx].distance = gnss.distanceBetween( ThisAircraft.latitude,
                                                   ThisAircraft.longitude,
@@ -138,18 +138,21 @@ static void Traffic_Update(int ndx)
 
 void ParseData()
 {
+    size_t rx_size = RF_Payload_Size(settings->rf_protocol);
+    rx_size = rx_size > sizeof(fo.raw) ? sizeof(fo.raw) : rx_size;
 
 #if DEBUG
     Hex2Bin(TxDataTemplate, RxBuffer);
 #endif
 
-    fo.raw = Bin2Hex(RxBuffer);
+    memset(fo.raw, 0, sizeof(fo.raw));
+    memcpy(fo.raw, RxBuffer, rx_size);
 
     if (settings->nmea_p) {
       StdOut.print(F("$PSRFI,"));
       StdOut.print((unsigned long) now()); StdOut.print(F(","));
-      StdOut.print(RF_last_rssi); StdOut.print(F(","));
-      StdOut.println(fo.raw);
+      StdOut.print(Bin2Hex(fo.raw, rx_size)); StdOut.print(F(","));
+      StdOut.println(RF_last_rssi);
     }
 
     if (protocol_decode && (*protocol_decode)((void *) RxBuffer, &ThisAircraft, &fo)) {

@@ -1,6 +1,6 @@
 /*
  * EEPROMHelper.h
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,14 @@
 #ifndef EEPROMHELPER_H
 #define EEPROMHELPER_H
 
-#if defined(ARDUINO)
+#if defined(ARDUINO) && !defined(ENERGIA_ARCH_CC13XX)
 #include <EEPROM.h>
 #endif /* ARDUINO */
 
 #include "SoftRF.h"
 
 #define SOFTRF_EEPROM_MAGIC 0xBABADEDA
-#define SOFTRF_EEPROM_VERSION 0x0000005C
+#define SOFTRF_EEPROM_VERSION 0x0000005D
 
 typedef struct Settings {
     uint8_t  mode;
@@ -54,8 +54,8 @@ typedef struct Settings {
     uint8_t  d1090:3;
     uint8_t  json:2;
 
-    uint8_t  resvd234;
-    uint8_t  resvd5;
+    uint8_t  power_save;
+    uint8_t  resvd2345;
     uint8_t  resvd6;
     uint8_t  resvd7;
     uint8_t  resvd8;
@@ -75,11 +75,10 @@ typedef struct EEPROM_S {
     settings_t settings;
 } eeprom_struct_t;
 
-
 typedef union EEPROM_U {
    eeprom_struct_t field;
    uint8_t raw[sizeof(eeprom_struct_t)];
-} eeprom_t;  
+} eeprom_t;
 
 void EEPROM_setup(void);
 void EEPROM_defaults(void);

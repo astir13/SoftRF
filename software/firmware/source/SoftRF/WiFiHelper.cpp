@@ -1,6 +1,6 @@
 /*
  * WiFiHelper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,10 @@
 #include "SoCHelper.h"
 #include "WiFiHelper.h"
 #include "TrafficHelper.h"
+#include "RFHelper.h"
+#include "WebHelper.h"
+#include "NMEAHelper.h"
+#include "BatteryHelper.h"
 
 String station_ssid = MY_ACCESSPOINT_SSID ;
 String station_psk  = MY_ACCESSPOINT_PSK ;
@@ -54,7 +58,11 @@ WiFiUDP Uni_Udp;
 
 unsigned int RFlocalPort = RELAY_SRC_PORT;      // local port to listen for UDP packets
 
-char UDPpacketBuffer[256]; //buffer to hold incoming and outgoing packets
+char UDPpacketBuffer[256]; // buffer to hold incoming and outgoing packets
+
+#if defined(POWER_SAVING_WIFI_TIMEOUT)
+static unsigned long WiFi_No_Clients_Time_ms = 0;
+#endif
 
 /**
  * @brief Read WiFi connection information from file system.
@@ -80,7 +88,7 @@ bool loadConfig(String *ssid, String *pass)
   // Read content from config file.
   String content = configFile.readString();
   configFile.close();
-  
+
   content.trim();
 
   // Check if ther is a second line available.
@@ -147,7 +155,7 @@ bool saveConfig(String *ssid, String *pass)
   configFile.println(*pass);
 
   configFile.close();
-  
+
   return true;
 } // saveConfig
 
@@ -171,11 +179,14 @@ size_t Raw_Receive_UDP(uint8_t *buf)
 
 void Raw_Transmit_UDP()
 {
-    size_t num = fo.raw.length();
+    size_t rx_size = RF_Payload_Size(settings->rf_protocol);
+    rx_size = rx_size > sizeof(fo.raw) ? sizeof(fo.raw) : rx_size;
+    String str = Bin2Hex(fo.raw, rx_size);
+    size_t len = str.length();
     // ASSERT(sizeof(UDPpacketBuffer) > 2 * PKT_SIZE + 1)
-    fo.raw.toCharArray(UDPpacketBuffer, sizeof(UDPpacketBuffer));
-    UDPpacketBuffer[num] = '\n';
-    SoC->WiFi_transmit_UDP(RELAY_DST_PORT, (byte *)UDPpacketBuffer, num + 1);
+    str.toCharArray(UDPpacketBuffer, sizeof(UDPpacketBuffer));
+    UDPpacketBuffer[len] = '\n';
+    SoC->WiFi_transmit_UDP(RELAY_DST_PORT, (byte *)UDPpacketBuffer, len + 1);
 }
 
 /**
@@ -284,17 +295,45 @@ void WiFi_setup()
     Serial.println(WiFi.softAPIP());
   }
 
-    Uni_Udp.begin(RFlocalPort);
-    Serial.print(F("UDP server has started at port: "));
-    Serial.println(RFlocalPort);
+  Uni_Udp.begin(RFlocalPort);
+  Serial.print(F("UDP server has started at port: "));
+  Serial.println(RFlocalPort);
+
+#if defined(POWER_SAVING_WIFI_TIMEOUT)
+  WiFi_No_Clients_Time_ms = millis();
+#endif
 }
 
 void WiFi_loop()
 {
 #if defined(USE_DNS_SERVER)
   if (dns_active) {
-    dnsServer.processNextRequest();  
+    dnsServer.processNextRequest();
+  }
+#endif
+
+#if defined(POWER_SAVING_WIFI_TIMEOUT)
+  if (settings->power_save == POWER_SAVE_WIFI && WiFi.getMode() == WIFI_AP) {
+    if (SoC->WiFi_clients_count() == 0) {
+      if ((millis() - WiFi_No_Clients_Time_ms) > POWER_SAVING_WIFI_TIMEOUT) {
+        NMEA_fini();
+        Web_fini();
+        WiFi_fini();
+
+        if (settings->nmea_p) {
+          StdOut.println(F("$PSRFS,WIFI_OFF"));
+        }
+      }
+    } else {
+      WiFi_No_Clients_Time_ms = millis();
+    }
   }
 #endif
 }
 
+void WiFi_fini()
+{
+  Uni_Udp.stop();
+
+  WiFi.mode(WIFI_OFF);
+}

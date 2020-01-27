@@ -1,6 +1,6 @@
 /*
  * WebHelper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ byte getVal(char c)
      return (byte)(toupper(c)-'A'+10);
 }
 
+#if DEBUG
 void Hex2Bin(String str, byte *buffer)
 {
   char hexdata[2 * PKT_SIZE + 1];
@@ -61,20 +62,64 @@ void Hex2Bin(String str, byte *buffer)
     buffer[j>>1] = getVal(hexdata[j+1]) + (getVal(hexdata[j]) << 4);
   }
 }
+#endif
 
-String Bin2Hex(byte *buffer)
-{
-  String str = "";
-  for (int i=0; i < PKT_SIZE; i++) {
-    byte c = buffer[i];
-    str += (c < 0x10 ? "0" : "") + String(c, HEX);
-  }
-  return str;
-}
+static const char about_html[] PROGMEM = "<html>\
+  <head>\
+    <meta name='viewport' content='width=device-width, initial-scale=1'>\
+    <title>About</title>\
+  </head>\
+<body>\
+<h1 align=center>About</h1>\
+<p>This firmware is a part of open SoftRF project</p>\
+<p>URL: http://github.com/lyusupov/SoftRF</p>\
+<p>Author: <b>Linar Yusupov</b></p>\
+<p>E-mail: linar.r.yusupov@gmail.com</p>\
+<h2 align=center>Credits</h2>\
+<p align=center>(in historical order)</p>\
+<table width=100%%>\
+<tr><th align=left>Ivan Grokhotkov</th><td align=left>Arduino core for ESP8266</td></tr>\
+<tr><th align=left>Zak Kemble</th><td align=left>nRF905 library</td></tr>\
+<tr><th align=left>Stanislaw Pusep</th><td align=left>flarm_decode</td></tr>\
+<tr><th align=left>Paul Stoffregen</th><td align=left>Arduino Time Library</td></tr>\
+<tr><th align=left>Mikal Hart</th><td align=left>TinyGPS++ and PString Libraries</td></tr>\
+<tr><th align=left>Phil Burgess</th><td align=left>Adafruit NeoPixel Library</td></tr>\
+<tr><th align=left>Andy Little</th><td align=left>Aircraft and MAVLink Libraries</td></tr>\
+<tr><th align=left>Peter Knight</th><td align=left>TrueRandom Library</td></tr>\
+<tr><th align=left>Matthijs Kooijman</th><td align=left>IBM LMIC framework for Arduino</td></tr>\
+<tr><th align=left>David Paiva</th><td align=left>ESP8266FtpServer</td></tr>\
+<tr><th align=left>Lammert Bies</th><td align=left>Lib_crc</td></tr>\
+<tr><th align=left>Pawel Jalocha</th><td align=left>OGN library</td></tr>\
+<tr><th align=left>Timur Sinitsyn, Tobias Simon, Ferry Huberts</th><td align=left>NMEA library</td></tr>\
+<tr><th align=left>yangbinbin (yangbinbin_ytu@163.com)</th><td align=left>ADS-B encoder C++ library</td></tr>\
+<tr><th align=left>Hristo Gochkov</th><td align=left>Arduino core for ESP32</td></tr>\
+<tr><th align=left>Evandro Copercini</th><td align=left>ESP32 BT SPP library</td></tr>\
+<tr><th align=left>Limor Fried and Ladyada</th><td align=left>Adafruit BMP085 library</td></tr>\
+<tr><th align=left>Kevin Townsend</th><td align=left>Adafruit BMP280 library</td></tr>\
+<tr><th align=left>Limor Fried and Kevin Townsend</th><td align=left>Adafruit MPL3115A2 library</td></tr>\
+<tr><th align=left>Oliver Kraus</th><td align=left>U8g2 LCD, OLED and eInk library</td></tr>\
+<tr><th align=left>Michael Miller</th><td align=left>NeoPixelBus library</td></tr>\
+<tr><th align=left>Shenzhen Xin Yuan (LilyGO) ET company</th><td align=left>TTGO T-Beam and T-Watch</td></tr>\
+<tr><th align=left>JS Foundation</th><td align=left>jQuery library</td></tr>\
+<tr><th align=left>XCSoar team</th><td align=left>EGM96 data</td></tr>\
+<tr><th align=left>Mike McCauley</th><td align=left>BCM2835 C library</td></tr>\
+<tr><th align=left>Dario Longobardi</th><td align=left>SimpleNetwork library</td></tr>\
+<tr><th align=left>Benoit Blanchon</th><td align=left>ArduinoJson library</td></tr>\
+<tr><th align=left>flashrom.org project</th><td align=left>Flashrom library</td></tr>\
+<tr><th align=left>Robert Wessels and Tony Cave</th><td align=left>EasyLink library</td></tr>\
+<tr><th align=left>Oliver Jowett</th><td align=left>Dump978 library</td></tr>\
+<tr><th align=left>Phil Karn</th><td align=left>FEC library</td></tr>\
+<tr><th align=left>Lewis He</th><td align=left>AXP20X and S7XG libraries</td></tr>\
+<tr><th align=left>Bodmer</th><td align=left>TFT library</td></tr>\
+</table>\
+<hr>\
+Copyright (C) 2015-2020 &nbsp;&nbsp;&nbsp; Linar Yusupov\
+</body>\
+</html>";
 
 void handleSettings() {
 
-  size_t size = 4500;
+  size_t size = 4700;
   char *offset;
   size_t len = 0;
   char *Settings_temp = (char *) malloc(size);
@@ -126,23 +171,39 @@ void handleSettings() {
 <th align=left>Protocol</th>\
 <td align=right>\
 <select name='protocol'>\
-<option %s value='%d'>Legacy</option>\
-<option %s value='%d'>OGNTP</option>\
-<option %s value='%d'>P3I</option>\
-<option %s value='%d'>FANET</option>\
+<option %s value='%d'>%s</option>\
+<option %s value='%d'>%s</option>\
+<option %s value='%d'>%s</option>\
+<option %s value='%d'>%s</option>\
 </select>\
 </td>\
 </tr>"),
-    (settings->rf_protocol == RF_PROTOCOL_LEGACY ? "selected" : "") , RF_PROTOCOL_LEGACY,
-    (settings->rf_protocol == RF_PROTOCOL_OGNTP ? "selected" : ""), RF_PROTOCOL_OGNTP,
-    (settings->rf_protocol == RF_PROTOCOL_P3I ? "selected" : ""), RF_PROTOCOL_P3I,
-    (settings->rf_protocol == RF_PROTOCOL_FANET ? "selected" : ""), RF_PROTOCOL_FANET
+    (settings->rf_protocol == RF_PROTOCOL_LEGACY ? "selected" : ""),
+     RF_PROTOCOL_LEGACY, legacy_proto_desc.name,
+    (settings->rf_protocol == RF_PROTOCOL_OGNTP ? "selected" : ""),
+     RF_PROTOCOL_OGNTP, ogntp_proto_desc.name,
+    (settings->rf_protocol == RF_PROTOCOL_P3I ? "selected" : ""),
+     RF_PROTOCOL_P3I, p3i_proto_desc.name,
+    (settings->rf_protocol == RF_PROTOCOL_FANET ? "selected" : ""),
+     RF_PROTOCOL_FANET, fanet_proto_desc.name
     );
-
-    len = strlen(offset);
-    offset += len;
-    size -= len;
+  } else {
+    snprintf_P ( offset, size,
+      PSTR("\
+<tr>\
+<th align=left>Protocol</th>\
+<td align=right>%s\
+</td>\
+</tr>"),
+    (settings->rf_protocol == RF_PROTOCOL_LEGACY   ? legacy_proto_desc.name :
+    (settings->rf_protocol == RF_PROTOCOL_ADSB_UAT ? uat978_proto_desc.name :
+    (settings->rf_protocol == RF_PROTOCOL_FANET    ? fanet_proto_desc.name  :
+     "UNK")))
+    );
   }
+  len = strlen(offset);
+  offset += len;
+  size -= len;
 
   /* Common part 2 */
   snprintf_P ( offset, size,
@@ -175,6 +236,7 @@ void handleSettings() {
 <option %s value='%d'>Hangglider</option>\
 <option %s value='%d'>Paraglider</option>\
 <option %s value='%d'>Balloon</option>\
+<option %s value='%d'>Static</option>\
 </select>\
 </td>\
 </tr>\
@@ -235,6 +297,7 @@ void handleSettings() {
   (settings->aircraft_type == AIRCRAFT_TYPE_HANGGLIDER ? "selected" : ""),  AIRCRAFT_TYPE_HANGGLIDER,
   (settings->aircraft_type == AIRCRAFT_TYPE_PARAGLIDER ? "selected" : ""),  AIRCRAFT_TYPE_PARAGLIDER,
   (settings->aircraft_type == AIRCRAFT_TYPE_BALLOON ? "selected" : ""),  AIRCRAFT_TYPE_BALLOON,
+  (settings->aircraft_type == AIRCRAFT_TYPE_STATIC ? "selected" : ""),  AIRCRAFT_TYPE_STATIC,
   (settings->alarm == TRAFFIC_ALARM_NONE ? "selected" : ""),  TRAFFIC_ALARM_NONE,
   (settings->alarm == TRAFFIC_ALARM_DISTANCE ? "selected" : ""),  TRAFFIC_ALARM_DISTANCE,
   (settings->alarm == TRAFFIC_ALARM_VECTOR ? "selected" : ""),  TRAFFIC_ALARM_VECTOR,
@@ -415,6 +478,15 @@ void handleSettings() {
 </td>\
 </tr>\
 <tr>\
+<th align=left>Power save</th>\
+<td align=right>\
+<select name='power_save'>\
+<option %s value='%d'>Disabled</option>\
+<option %s value='%d'>WiFi OFF (10 min.)</option>\
+</select>\
+</td>\
+</tr>\
+<tr>\
 <th align=left>Stealth</th>\
 <td align=right>\
 <input type='radio' name='stealth' value='0' %s>Off\
@@ -429,18 +501,20 @@ void handleSettings() {
 </td>\
 </tr>\
 </table>\
-<p align=center><INPUT type='submit' value='Save and restart'><p>\
+<p align=center><INPUT type='submit' value='Save and restart'></p>\
 </form>\
 </body>\
 </html>"),
+  (settings->power_save == POWER_SAVE_NONE ? "selected" : ""), POWER_SAVE_NONE,
+  (settings->power_save == POWER_SAVE_WIFI ? "selected" : ""), POWER_SAVE_WIFI,
   (!settings->stealth ? "checked" : "") , (settings->stealth ? "checked" : ""),
   (!settings->no_track ? "checked" : "") , (settings->no_track ? "checked" : "")
   );
 
   SoC->swSer_enableRx(false);
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
+  server.sendHeader(String(F("Cache-Control")), String(F("no-cache, no-store, must-revalidate")));
+  server.sendHeader(String(F("Pragma")), String(F("no-cache")));
+  server.sendHeader(String(F("Expires")), String(F("-1")));
   server.send ( 200, "text/html", Settings_temp );
   SoC->swSer_enableRx(true);
   free(Settings_temp);
@@ -452,6 +526,7 @@ void handleRoot() {
   int hr = min / 60;
 
   float vdd = Battery_voltage() ;
+  bool low_voltage = (Battery_voltage() <= Battery_threshold());
 
   time_t timestamp = ThisAircraft.timestamp;
   unsigned int sats = gnss.satellites.value(); // Number of satellites in use (u32)
@@ -499,7 +574,7 @@ void handleRoot() {
 #endif /* ENABLE_AHRS */
  "<tr><th align=left>Uptime</th><td align=right>%02d:%02d:%02d</td></tr>\
   <tr><th align=left>Free memory</th><td align=right>%u</td></tr>\
-  <tr><th align=left>Battery voltage</th><td align=right>%s</td></tr>\
+  <tr><th align=left>Battery voltage</th><td align=right><font color=%s>%s</font></td></tr>\
  </table>\
  <table width=100%%>\
    <tr><th align=left>Packets</th>\
@@ -539,13 +614,14 @@ void handleRoot() {
     (ahrs_chip == NULL ? "NONE" : ahrs_chip->name),
 #endif /* ENABLE_AHRS */
     hr, min % 60, sec % 60, ESP.getFreeHeap(),
-    str_Vcc, tx_packets_counter, rx_packets_counter,
+    low_voltage ? "red" : "green", str_Vcc,
+    tx_packets_counter, rx_packets_counter,
     timestamp, sats, str_lat, str_lon, str_alt
   );
   SoC->swSer_enableRx(false);
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
+  server.sendHeader(String(F("Cache-Control")), String(F("no-cache, no-store, must-revalidate")));
+  server.sendHeader(String(F("Pragma")), String(F("no-cache")));
+  server.sendHeader(String(F("Expires")), String(F("-1")));
   server.send ( 200, "text/html", Root_temp );
   SoC->swSer_enableRx(true);
   free(Root_temp);
@@ -553,7 +629,7 @@ void handleRoot() {
 
 void handleInput() {
 
-  char *Input_temp = (char *) malloc(1450);
+  char *Input_temp = (char *) malloc(1520);
   if (Input_temp == NULL) {
     return;
   }
@@ -595,9 +671,11 @@ void handleInput() {
       settings->stealth = server.arg(i).toInt();
     } else if (server.argName(i).equals("no_track")) {
       settings->no_track = server.arg(i).toInt();
+    } else if (server.argName(i).equals("power_save")) {
+      settings->power_save = server.arg(i).toInt();
     }
   }
-  snprintf_P ( Input_temp, 1450,
+  snprintf_P ( Input_temp, 1520,
 PSTR("<html>\
 <head>\
 <meta http-equiv='refresh' content='15; url=/'>\
@@ -625,6 +703,7 @@ PSTR("<html>\
 <tr><th align=left>DUMP1090</th><td align=right>%d</td></tr>\
 <tr><th align=left>Stealth</th><td align=right>%s</td></tr>\
 <tr><th align=left>No track</th><td align=right>%s</td></tr>\
+<tr><th align=left>Power save</th><td align=right>%d</td></tr>\
 </table>\
 <hr>\
   <p align=center><h1 align=center>Restart is in progress... Please, wait!</h1></p>\
@@ -636,7 +715,8 @@ PSTR("<html>\
   BOOL_STR(settings->nmea_g), BOOL_STR(settings->nmea_p),
   BOOL_STR(settings->nmea_l), BOOL_STR(settings->nmea_s),
   settings->nmea_out, settings->gdl90, settings->d1090,
-  BOOL_STR(settings->stealth), BOOL_STR(settings->no_track)
+  BOOL_STR(settings->stealth), BOOL_STR(settings->no_track),
+  settings->power_save
   );
   SoC->swSer_enableRx(false);
   server.send ( 200, "text/html", Input_temp );
@@ -646,7 +726,7 @@ PSTR("<html>\
   EEPROM_store();
   RF_Shutdown();
   delay(1000);
-  ESP.restart();
+  SoC->reset();
 }
 
 void handleNotFound() {
@@ -667,78 +747,27 @@ void handleNotFound() {
   server.send ( 404, "text/plain", message );
 }
 
-void handleAbout() {
-
-  char *About_temp = (char *) malloc(2400);
-  if (About_temp == NULL) {
-    return;
-  }
-
-  snprintf_P ( About_temp, 2400,
-    PSTR("<html>\
-  <head>\
-    <meta name='viewport' content='width=device-width, initial-scale=1'>\
-    <title>About</title>\
-  </head>\
-<body>\
-<h1 align=center>About</h1>\
-<p>This firmware is a part of open SoftRF project</p>\
-<p>URL: http://github.com/lyusupov/SoftRF</p>\
-<p>Author: <b>Linar Yusupov</b></p>\
-<p>E-mail: linar.r.yusupov@gmail.com</p>\
-<h2 align=center>Credits</h2>\
-<p align=center>(in historical order)</p>\
-<table width=100%%>\
-<tr><th align=left>Ivan Grokhotkov</th><td align=left>Arduino core for ESP8266</td></tr>\
-<tr><th align=left>Zak Kemble</th><td align=left>nRF905 library</td></tr>\
-<tr><th align=left>Stanislaw Pusep</th><td align=left>flarm_decode</td></tr>\
-<tr><th align=left>Paul Stoffregen</th><td align=left>Arduino Time Library</td></tr>\
-<tr><th align=left>Mikal Hart</th><td align=left>TinyGPS++ and PString Libraries</td></tr>\
-<tr><th align=left>Phil Burgess</th><td align=left>Adafruit NeoPixel Library</td></tr>\
-<tr><th align=left>Andy Little</th><td align=left>Aircraft and MAVLink Libraries</td></tr>\
-<tr><th align=left>Peter Knight</th><td align=left>TrueRandom Library</td></tr>\
-<tr><th align=left>Matthijs Kooijman</th><td align=left>IBM LMIC framework for Arduino</td></tr>\
-<tr><th align=left>David Paiva</th><td align=left>ESP8266FtpServer</td></tr>\
-<tr><th align=left>Lammert Bies</th><td align=left>Lib_crc</td></tr>\
-<tr><th align=left>Pawel Jalocha</th><td align=left>OGN library</td></tr>\
-<tr><th align=left>Timur Sinitsyn, Tobias Simon, Ferry Huberts</th><td align=left>NMEA library</td></tr>\
-<tr><th align=left>yangbinbin (yangbinbin_ytu@163.com)</th><td align=left>ADS-B encoder C++ library</td></tr>\
-<tr><th align=left>Hristo Gochkov</th><td align=left>Arduino core for ESP32</td></tr>\
-<tr><th align=left>Limor Fried and Ladyada</th><td align=left>Adafruit BMP085 library</td></tr>\
-<tr><th align=left>Kevin Townsend</th><td align=left>Adafruit BMP280 library</td></tr>\
-<tr><th align=left>Limor Fried and Kevin Townsend</th><td align=left>Adafruit MPL3115A2 library</td></tr>\
-<tr><th align=left>Oliver Kraus</th><td align=left>U8g2 LCD, OLED and eInk library</td></tr>\
-<tr><th align=left>Michael Miller</th><td align=left>NeoPixelBus library</td></tr>\
-<tr><th align=left>Shenzhen Xin Yuan (LilyGO) ET company</th><td align=left>TTGO T-Beam board</td></tr>\
-</table>\
-<hr>\
-Copyright (C) 2015-2018 &nbsp;&nbsp;&nbsp; Linar Yusupov\
-</body>\
-</html>")
-  );
-  SoC->swSer_enableRx(false);
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send ( 200, "text/html", About_temp );
-  SoC->swSer_enableRx(true);
-  free(About_temp);
-}
-
 void Web_setup()
 {
   server.on ( "/", handleRoot );
   server.on ( "/settings", handleSettings );
-  server.on ( "/about", handleAbout );
-  
+  server.on ( "/about", []() {
+    SoC->swSer_enableRx(false);
+    server.sendHeader(String(F("Cache-Control")), String(F("no-cache, no-store, must-revalidate")));
+    server.sendHeader(String(F("Pragma")), String(F("no-cache")));
+    server.sendHeader(String(F("Expires")), String(F("-1")));
+    server.send_P ( 200, PSTR("text/html"), about_html);
+    SoC->swSer_enableRx(true);
+  } );
+
   server.on ( "/input", handleInput );
   server.on ( "/inline", []() {
     server.send ( 200, "text/plain", "this works as well" );
   } );
   server.on("/firmware", HTTP_GET, [](){
     SoC->swSer_enableRx(false);
-    server.sendHeader("Connection", "close");
-    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader(String(F("Connection")), String(F("close")));
+    server.sendHeader(String(F("Access-Control-Allow-Origin")), String(F("*")));
     server.send_P(200,
       PSTR("text/html"),
       PSTR("\
@@ -807,13 +836,14 @@ $('form').submit(function(e){\
 //    SoC->swSer_enableRx(true);
     RF_Shutdown();
     delay(1000);
-    ESP.restart();
+    SoC->reset();
   },[](){
     HTTPUpload& upload = server.upload();
     if(upload.status == UPLOAD_FILE_START){
       Serial.setDebugOutput(true);
       SoC->WiFiUDP_stopAll();
-      Serial.printf("Update: %s\n", upload.filename.c_str());
+      SoC->WDT_fini();
+      Serial.printf("Update: %s\r\n", upload.filename.c_str());
       uint32_t maxSketchSpace = SoC->maxSketchSpace();
       if(!Update.begin(maxSketchSpace)){//start with max available size
         Update.printError(Serial);
@@ -824,7 +854,7 @@ $('form').submit(function(e){\
       }
     } else if(upload.status == UPLOAD_FILE_END){
       if(Update.end(true)){ //true to set the size to the current progress
-        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+        Serial.printf("Update Success: %u\r\nRebooting...\r\n", upload.totalSize);
       } else {
         Update.printError(Serial);
       }
@@ -865,4 +895,9 @@ $('form').submit(function(e){\
 void Web_loop()
 {
   server.handleClient();
+}
+
+void Web_fini()
+{
+  server.stop();
 }

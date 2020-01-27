@@ -14,25 +14,47 @@
 static uint64_t epochMilli ;
 static uint64_t epochMicro ;
 
+SPIClass::SPIClass(uint8_t spi_bus)
+    :_spi_num(spi_bus)
+{}
+
 void SPIClass::begin() {
+  int rval;
+
   initialiseEpoch();
-  
-  if (!bcm2835_spi_begin()) {
+
+  if (_spi_num == SPI_AUX) {
+    rval = bcm2835_aux_spi_begin();
+  } else {
+    rval = bcm2835_spi_begin();
+  }
+
+  if (!rval) {
     printf( "bcm2835_spi_begin() failed. Are you running as root??\n");
   } else {
-		// LMIC Library code control CS line
-		bcm2835_spi_chipSelect(BCM2835_SPI_CS_NONE);  
-	}
+    // LMIC Library code control CS line
+    if (_spi_num != SPI_AUX) {
+      bcm2835_spi_chipSelect(BCM2835_SPI_CS_NONE);
+    }
+  }
 }
 
 void SPIClass::end() {
   //End the SPI
-  bcm2835_spi_end();
+  if (_spi_num == SPI_AUX) {
+    bcm2835_aux_spi_end();
+  } else {
+    bcm2835_spi_end();
+  }
 }
 
 void SPIClass::beginTransaction(SPISettings settings) {
   //Set SPI clock divider
-  bcm2835_spi_setClockDivider(settings.divider);
+  if (_spi_num == SPI_AUX) {
+    bcm2835_aux_spi_setClockDivider(settings.divider);
+  } else {
+    bcm2835_spi_setClockDivider(settings.divider);
+  }
   //Set the SPI bit Order
   bcm2835_spi_setBitOrder(settings.bitOrder);
   //Set SPI data mode
@@ -63,9 +85,39 @@ void SPIClass::endTransaction() {
   
 byte SPIClass::transfer(byte _data) {
   byte data;
-  data= bcm2835_spi_transfer((uint8_t)_data);
+  if (_spi_num == SPI_AUX) {
+    data = _data;
+    bcm2835_aux_spi_transfern((char *) &data, 1);
+  } else {
+    data = bcm2835_spi_transfer((uint8_t)_data);
+  }
   return data;
 }
+
+SPIClass SPI0(SPI_PRI);
+SPIClass SPI1(SPI_AUX);
+
+/* I2C is not implemented yet */
+TwoWire::TwoWire()
+{}
+
+void TwoWire::begin() {
+}
+
+void TwoWire::setClock(uint32_t clock) {
+}
+
+void TwoWire::beginTransmission(uint8_t byte) {
+}
+
+uint8_t TwoWire::endTransmission() {
+  return 0;
+}
+
+size_t TwoWire::write(uint8_t byte) {
+}
+
+TwoWire Wire;
  
 void pinMode(unsigned char pin, unsigned char mode) {
   if (pin == LMIC_UNUSED_PIN) {
@@ -291,23 +343,35 @@ size_t SerialSimulator::println(const char* s) {
   fprintf( stdout, "%s\n",s);
 }
 
+size_t SerialSimulator::print(String s) {
+  fprintf( stdout, "%s",s.c_str());
+}
+
 size_t SerialSimulator::println(String s) {
-  fprintf( stdout, "%s\n",s);
+  fprintf( stdout, "%s\n",s.c_str());
 }
 
 size_t SerialSimulator::print(const char* s) {
   fprintf( stdout, "%s",s);
 }
 
-size_t SerialSimulator::println(u2_t n) {
+size_t SerialSimulator::println(short signed int n) {
   fprintf(stdout, "%d\n", n);
+}
+
+size_t SerialSimulator::println(short unsigned int n) {
+  fprintf(stdout, "%u\n", n);
 }
 
 size_t SerialSimulator::print(ostime_t n) {
-  fprintf(stdout, "%d\n", n);
+  fprintf(stdout, "%d", n);
 }
 
 size_t SerialSimulator::print(unsigned long n) {
+  fprintf(stdout, "%lu", n);
+}
+
+size_t SerialSimulator::println(unsigned long n) {
   fprintf(stdout, "%lu\n", n);
 }
 
@@ -327,6 +391,10 @@ size_t SerialSimulator::print(char ch) {
 
 size_t SerialSimulator::println(char ch) {
   fprintf(stdout, "%c\n", ch);
+}
+
+size_t SerialSimulator::println(int8_t n) {
+  fprintf(stdout, "%d\n", n);
 }
 
 size_t SerialSimulator::print(unsigned char ch, int base) {

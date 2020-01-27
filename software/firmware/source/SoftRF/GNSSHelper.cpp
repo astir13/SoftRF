@@ -1,6 +1,6 @@
 /*
  * GNSSHelper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "NMEAHelper.h"
 #include "SoCHelper.h"
 #include "WiFiHelper.h"
+#include "RFHelper.h"
 
 #include "SoftRF.h"
 
@@ -50,7 +51,8 @@ unsigned long GGA_Stop_Time_Marker = 0;
 boolean gnss_set_sucess = false ;
 TinyGPSPlus gnss;  // Create an Instance of the TinyGPS++ object called gnss
 
-uint8_t GNSSbuf[240]; // 3 lines of 80 characters each
+uint8_t GNSSbuf[250]; // at least 3 lines of 80 characters each
+                      // and 40+30*N bytes for "UBX-MON-VER" payload
 int GNSS_cnt = 0;
 
  /* CFG-MSG */
@@ -70,6 +72,13 @@ const uint8_t setNav5[] PROGMEM = {0xFF, 0xFF, 0x07, 0x03, 0x00, 0x00, 0x00, 0x0
                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                    0x00, 0x00, 0x00, 0x00};
 
+const uint8_t CFG_RST[12]   PROGMEM = {0xb5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00,
+                                       0x00, 0x01, 0x00, 0x0F, 0x66};
+
+const uint8_t RXM_PMREQ[16] PROGMEM = {0xb5, 0x62, 0x02, 0x41, 0x08, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+                                       0x4d, 0x3b};
+
 const char *GNSS_name[] = {
   [GNSS_MODULE_NONE]    = "NONE",
   [GNSS_MODULE_NMEA]    = "NMEA",
@@ -77,8 +86,49 @@ const char *GNSS_name[] = {
   [GNSS_MODULE_U7]      = "U7",
   [GNSS_MODULE_U8]      = "U8",
   [GNSS_MODULE_U9]      = "U9",
-  [GNSS_MODULE_MAV]     = "MAV"
+  [GNSS_MODULE_MAV]     = "MAV",
+  [GNSS_MODULE_S7XG]    = "S7XG"
 };
+
+#if defined(USE_NMEA_CFG)
+
+#include "RFHelper.h"       /* RF_Shutdown() */
+#include "SoundHelper.h"
+#include "LEDHelper.h"
+#include "GDL90Helper.h"
+#include "D1090Helper.h"
+
+TinyGPSCustom C_Version      (gnss, "PSRFC", 1);
+TinyGPSCustom C_Mode         (gnss, "PSRFC", 2);
+TinyGPSCustom C_Protocol     (gnss, "PSRFC", 3);
+TinyGPSCustom C_Band         (gnss, "PSRFC", 4);
+TinyGPSCustom C_AcftType     (gnss, "PSRFC", 5);
+TinyGPSCustom C_Alarm        (gnss, "PSRFC", 6);
+TinyGPSCustom C_TxPower      (gnss, "PSRFC", 7);
+TinyGPSCustom C_Volume       (gnss, "PSRFC", 8);
+TinyGPSCustom C_Pointer      (gnss, "PSRFC", 9);
+TinyGPSCustom C_NMEA_gnss    (gnss, "PSRFC", 10);
+TinyGPSCustom C_NMEA_private (gnss, "PSRFC", 11);
+TinyGPSCustom C_NMEA_legacy  (gnss, "PSRFC", 12);
+TinyGPSCustom C_NMEA_sensors (gnss, "PSRFC", 13);
+TinyGPSCustom C_NMEA_Output  (gnss, "PSRFC", 14);
+TinyGPSCustom C_GDL90_Output (gnss, "PSRFC", 15);
+TinyGPSCustom C_D1090_Output (gnss, "PSRFC", 16);
+TinyGPSCustom C_Stealth      (gnss, "PSRFC", 17);
+TinyGPSCustom C_noTrack      (gnss, "PSRFC", 18);
+
+#endif /* USE_NMEA_CFG */
+
+#if defined(USE_S7XG_DRIVER)
+
+#include <s7xg.h>
+
+extern S7XG_Class s7xg;
+extern bool s7xg_receive_active;
+extern void NMEA_RMCGGA(char *, GPS_Class);
+
+unsigned long S7XG_Time_Marker = 0;
+#endif /* USE_S7XG_DRIVER */
 
 static uint8_t makeUBXCFG(uint8_t cl, uint8_t id, uint8_t msglen, const uint8_t *msg)
 {
@@ -248,8 +298,7 @@ static void setup_UBX()
 
 static void setup_NMEA()
 {
-  SoC->swSer_begin(9600);
-
+#if 0
   //swSer.write("$PUBX,41,1,0007,0003,9600,0*10\r\n");
   swSer.write("$PUBX,41,1,0007,0003,38400,0*20\r\n");
 
@@ -263,20 +312,35 @@ static void setup_NMEA()
 #if !defined(NMEA_TCP_SERVICE)
   swSer.write("$PUBX,40,GSA,0,0,0,0*4E\r\n"); delay(250);
 #endif
+#endif
+
+#if defined(USE_AT6558_SETUP)
+  /* Assume that we deal with fake NEO module (AT6558 based) */
+  swSer.write("$PCAS04,5*1C\r\n"); /* GPS + GLONASS */     delay(250);
+#if defined(NMEA_TCP_SERVICE)
+  /* GGA,RMC and GSA */
+  swSer.write("$PCAS03,1,0,1,0,1,0,0,0,0,0,,,0,0*03\r\n"); delay(250);
+#else
+  /* GGA and RMC */
+  swSer.write("$PCAS03,1,0,0,0,1,0,0,0,0,0,,,0,0*02\r\n"); delay(250);
+#endif
+  swSer.write("$PCAS11,6*1B\r\n"); /* Aviation < 2g */     delay(250);
+#endif /* USE_AT6558_SETUP */
 }
 
 /* ------ BEGIN -----------  https://github.com/Black-Thunder/FPV-Tracker */
 
 enum ubloxState{ WAIT_SYNC1, WAIT_SYNC2, GET_CLASS, GET_ID, GET_LL, GET_LH, GET_DATA, GET_CKA, GET_CKB };
 
-ubloxState ubloxProcessDataState;
+ubloxState ubloxProcessDataState = WAIT_SYNC1;
 
 unsigned short ubloxExpectedDataLength;
-unsigned short ubloxDataLength;
 unsigned short ubloxClass, ubloxId;
 unsigned char  ubloxCKA, ubloxCKB;
 
 // process serial data
+// data is stored inside #GNSSbuf, data size inside #GNSS_cnt
+// warning : if #GNSSbuf is too short, data is truncated.
 static int ubloxProcessData(unsigned char data) {
 	int parsed = 0;
 
@@ -321,26 +385,19 @@ static int ubloxProcessData(unsigned char data) {
 
 	case GET_LH:
 		ubloxExpectedDataLength += data << 8;
-		ubloxDataLength = 0;
+		GNSS_cnt = 0;
 		ubloxCKA += data;
 		ubloxCKB += ubloxCKA;
-		if (ubloxExpectedDataLength <= sizeof(GNSSbuf)) {
-			ubloxProcessDataState = GET_DATA;
-		}
-		else {
-			// discard overlong message
-			ubloxProcessDataState = WAIT_SYNC1;
-		}
+		ubloxProcessDataState = GET_DATA;
 		break;
 
 	case GET_DATA:
 		ubloxCKA += data;
 		ubloxCKB += ubloxCKA;
-		// next will discard data if it exceeds our biggest known msg
-		if (ubloxDataLength < sizeof(GNSSbuf)) {
-			GNSSbuf[ubloxDataLength++] = data;
+		if (GNSS_cnt < sizeof(GNSSbuf)) {
+			GNSSbuf[GNSS_cnt++] = data;
 		}
-		if (ubloxDataLength >= ubloxExpectedDataLength) {
+		if ((--ubloxExpectedDataLength) == 0) {
 			ubloxProcessDataState = GET_CKA;
 		}
 		break;
@@ -426,11 +483,23 @@ static byte GNSS_version() {
         if (ubloxClass == 0x0A) { // MON
           if (ubloxId == 0x04) {  // VER
 
+            // UBX-MON-VER data description
+            // uBlox 6  - page 166 : https://www.u-blox.com/sites/default/files/products/documents/u-blox6_ReceiverDescrProtSpec_%28GPS.G6-SW-10018%29_Public.pdf
+            // uBlox 7  - page 153 : https://www.u-blox.com/sites/default/files/products/documents/u-blox7-V14_ReceiverDescriptionProtocolSpec_%28GPS.G7-SW-12001%29_Public.pdf
+            // uBlox M8 - page 300 : https://www.u-blox.com/sites/default/files/products/documents/u-blox8-M8_ReceiverDescrProtSpec_%28UBX-13003221%29_Public.pdf
+
             Serial.print(F("INFO: GNSS module HW version: "));
             Serial.println((char *) &GNSSbuf[30]);
 
             Serial.print(F("INFO: GNSS module FW version: "));
             Serial.println((char *) &GNSSbuf[0]);
+
+#ifdef DO_GNSS_DEBUG
+            for(unsigned i = 30 + 10; i < GNSS_cnt; i+=30) {
+              Serial.print(F("INFO: GNSS module extension: "));
+              Serial.println((char *) &GNSSbuf[i]);
+            }
+#endif
 
             if (GNSSbuf[33] == '4')
               rval = GNSS_MODULE_U6;
@@ -453,16 +522,32 @@ byte GNSS_setup() {
 
   byte rval = GNSS_MODULE_NONE;
 
-  //setup_NMEA();
+#if defined(USE_S7XG_DRIVER)
+  if (hw_info.model == SOFTRF_MODEL_SKYWATCH &&
+      hw_info.rf    == RF_IC_S7XG ) {
 
-  SoC->swSer_begin(9600);
+    s7xg.gpsStop();
+    s7xg.gpsReset();
+    s7xg.gpsSetLevelShift(true);
+    s7xg.gpsSetSystem(GPS_STATE_SYS_GPS_GLONASS);
+    s7xg.gpsSetPositioningCycle(1000);
+    s7xg.gpsSetMode(GPS_MODE_MANUAL);
+
+    S7XG_Time_Marker = millis();
+
+    return GNSS_MODULE_S7XG;
+  }
+#endif /* USE_S7XG_DRIVER */
+
+  SoC->swSer_begin(SERIAL_IN_BR);
 
   if (!GNSS_probe())
     return rval;
 
   rval = GNSS_MODULE_NMEA;
 
-  if (hw_info.model == SOFTRF_MODEL_PRIME_MK2) {
+  if (hw_info.model == SOFTRF_MODEL_PRIME_MK2 ||
+      hw_info.model == SOFTRF_MODEL_RASPBERRY ) {
 
     rval = GNSS_version();
 
@@ -473,6 +558,8 @@ byte GNSS_setup() {
       // Set the navigation mode (Airborne, 1G)
       // Turning off some GPS NMEA sentences on the uBlox modules
       setup_UBX();
+    } else {
+      setup_NMEA();
     }
   }
 
@@ -483,6 +570,28 @@ byte GNSS_setup() {
   }
 
   return rval;
+}
+
+void GNSS_fini()
+{
+  if (hw_info.model == SOFTRF_MODEL_PRIME_MK2) {
+    if (hw_info.gnss == GNSS_MODULE_U6 ||
+        hw_info.gnss == GNSS_MODULE_U7 ||
+        hw_info.gnss == GNSS_MODULE_U8) {
+
+      // Controlled Software reset
+      for (int i = 0; i < sizeof(CFG_RST); i++) {
+        swSer.write(pgm_read_byte(&CFG_RST[i]));
+      }
+
+      delay(600);
+
+      // power off until wakeup call
+      for (int i = 0; i < sizeof(RXM_PMREQ); i++) {
+        swSer.write(pgm_read_byte(&RXM_PMREQ[i]));
+      }
+    }
+  }
 }
 
 void GNSSTimeSync()
@@ -504,7 +613,7 @@ void GNSSTimeSync()
   #endif
       setTime(gnss.time.hour(), gnss.time.minute(), gnss.time.second(), gnss.date.day(), gnss.date.month(), gnss.date.year());
       GNSSTimeSyncMarker = millis();
-    }  
+    }
   }
 }
 
@@ -514,17 +623,73 @@ void PickGNSSFix()
   int ndx;
   int c = -1;
 
+#if defined(USE_S7XG_DRIVER)
+  if (hw_info.model == SOFTRF_MODEL_SKYWATCH &&
+      hw_info.rf    == RF_IC_S7XG ) {
+
+    if ((millis() - S7XG_Time_Marker) > 1000 ) {
+      if (s7xg_receive_active) {
+        s7xg.loraReceiveContinuous(false);
+      }
+
+      GPS_Class gnss_data = s7xg.gpsGetData(GPS_DATA_TYPE_DD);
+
+      if (s7xg_receive_active) {
+        s7xg.loraReceiveContinuous(true);
+      }
+
+      if (gnss_data.isVaild()) {
+        NMEA_RMCGGA((char *) GNSSbuf, gnss_data);
+        for (int i=0; i < strlen((char *) GNSSbuf); i++) {
+          gnss.encode(GNSSbuf[i]);
+        }
+        NMEA_Out(GNSSbuf, strlen((char *) GNSSbuf), false);
+      }
+
+      S7XG_Time_Marker = millis();
+    }
+
+    return;
+  }
+#endif /* USE_S7XG_DRIVER */
+
   /*
    * Check SW, HW and BT UARTs for data
    * WARNING! Make use only one input source at a time.
    */
   while (true) {
+#if !defined(USE_NMEA_CFG)
     if (swSer.available() > 0) {
       c = swSer.read();
     } else if (Serial.available() > 0) {
       c = Serial.read();
+#else
+    /* Give priority to 'control' channel on STM32-based 'Retro' platform */
+    if (Serial.available() > 0) {
+      c = Serial.read();
+#if 0
+      /* This makes possible to configure S76x's built-in SONY GNSS from aside */
+      if (hw_info.model == SOFTRF_MODEL_DONGLE) {
+        swSer.write(c);
+      }
+#endif
+    } else if (swSer.available() > 0) {
+      c = swSer.read();
+#endif /* USE_NMEA_CFG */
     } else if (SoC->Bluetooth && SoC->Bluetooth->available() > 0) {
       c = SoC->Bluetooth->read();
+
+      /*
+       * Don't forget to disable echo:
+       *
+       * stty raw -echo -F /dev/rfcomm0
+       *
+       * GNSS input becomes garbled otherwise
+       */
+
+      // Serial.write((char) c);
+      /* Ignore Bluetooth input for a while */
+      // break;
     } else {
       /* return back if no input data */
       break;
@@ -579,17 +744,156 @@ void PickGNSSFix()
            * Work around issue with "always 0.0,M" GGA geoid separation value
            * given by some Chinese GNSS chipsets
            */
+#if defined(USE_NMEALIB)
           if (hw_info.model == SOFTRF_MODEL_PRIME_MK2 &&
               !strncmp((char *) &GNSSbuf[ndx+3], "GGA,", strlen("GGA,")) &&
               gnss.separation.meters() == 0.0) {
             NMEA_GGA();
-          } else {
+          }
+          else
+#endif
+          {
             NMEA_Out(&GNSSbuf[ndx], write_size, true);
           }
 
           break;
         }
       }
+#if defined(USE_NMEA_CFG)
+      if (C_Version.isUpdated()) {
+        if (strncmp(C_Version.value(), "?", 1) == 0) {
+          char psrfc_buf[MAX_PSRFC_LEN];
+
+          snprintf_P(psrfc_buf, sizeof(psrfc_buf),
+              PSTR("$PSRFC,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d*"),
+              PSRFC_VERSION, settings->mode, settings->rf_protocol,
+              settings->band, settings->aircraft_type, settings->alarm,
+              settings->txpower, BUZZER_OFF, LED_OFF,
+              settings->nmea_g, settings->nmea_p, settings->nmea_l,
+              settings->nmea_s, NMEA_UART, GDL90_OFF,
+              D1090_OFF, settings->stealth, settings->no_track );
+
+          NMEA_add_checksum(psrfc_buf, sizeof(psrfc_buf) - strlen(psrfc_buf));
+          NMEA_Out((byte *) psrfc_buf, strlen(psrfc_buf), false);
+
+        } else if (atoi(C_Version.value()) == PSRFC_VERSION) {
+          bool cfg_is_updated = false;
+
+          if (C_Mode.isUpdated())
+          {
+            settings->mode = atoi(C_Mode.value());
+            Serial.print(F("Mode = ")); Serial.println(settings->mode);
+            cfg_is_updated = true;
+          }
+          if (C_Protocol.isUpdated())
+          {
+            settings->rf_protocol = atoi(C_Protocol.value());
+            Serial.print(F("Protocol = ")); Serial.println(settings->rf_protocol);
+            cfg_is_updated = true;
+          }
+          if (C_Band.isUpdated())
+          {
+            settings->band = atoi(C_Band.value());
+            Serial.print(F("Region = ")); Serial.println(settings->band);
+            cfg_is_updated = true;
+          }
+          if (C_AcftType.isUpdated())
+          {
+            settings->aircraft_type = atoi(C_AcftType.value());
+            Serial.print(F("AcftType = ")); Serial.println(settings->aircraft_type);
+            cfg_is_updated = true;
+          }
+          if (C_Alarm.isUpdated())
+          {
+            settings->alarm = atoi(C_Alarm.value());
+            Serial.print(F("Alarm = ")); Serial.println(settings->alarm);
+            cfg_is_updated = true;
+          }
+          if (C_TxPower.isUpdated())
+          {
+            settings->txpower = atoi(C_TxPower.value());
+            Serial.print(F("TxPower = ")); Serial.println(settings->txpower);
+            cfg_is_updated = true;
+          }
+          if (C_Volume.isUpdated())
+          {
+            settings->volume = atoi(C_Volume.value());
+            Serial.print(F("Volume = ")); Serial.println(settings->volume);
+            cfg_is_updated = true;
+          }
+           if (C_Pointer.isUpdated())
+          {
+            settings->pointer = atoi(C_Pointer.value());
+            Serial.print(F("Pointer = ")); Serial.println(settings->pointer);
+            cfg_is_updated = true;
+          }
+          if (C_NMEA_gnss.isUpdated())
+          {
+            settings->nmea_g = atoi(C_NMEA_gnss.value());
+            Serial.print(F("NMEA_gnss = ")); Serial.println(settings->nmea_g);
+            cfg_is_updated = true;
+          }
+          if (C_NMEA_private.isUpdated())
+          {
+            settings->nmea_p = atoi(C_NMEA_private.value());
+            Serial.print(F("NMEA_private = ")); Serial.println(settings->nmea_p);
+            cfg_is_updated = true;
+          }
+          if (C_NMEA_legacy.isUpdated())
+          {
+            settings->nmea_l = atoi(C_NMEA_legacy.value());
+            Serial.print(F("NMEA_legacy = ")); Serial.println(settings->nmea_l);
+            cfg_is_updated = true;
+          }
+           if (C_NMEA_sensors.isUpdated())
+          {
+            settings->nmea_s = atoi(C_NMEA_sensors.value());
+            Serial.print(F("NMEA_sensors = ")); Serial.println(settings->nmea_s);
+            cfg_is_updated = true;
+          }
+          if (C_NMEA_Output.isUpdated())
+          {
+            settings->nmea_out = atoi(C_NMEA_Output.value());
+            Serial.print(F("NMEA_Output = ")); Serial.println(settings->nmea_out);
+            cfg_is_updated = true;
+          }
+          if (C_GDL90_Output.isUpdated())
+          {
+            settings->gdl90 = atoi(C_GDL90_Output.value());
+            Serial.print(F("GDL90_Output = ")); Serial.println(settings->gdl90);
+            cfg_is_updated = true;
+          }
+          if (C_D1090_Output.isUpdated())
+          {
+            settings->d1090 = atoi(C_D1090_Output.value());
+            Serial.print(F("D1090_Output = ")); Serial.println(settings->d1090);
+            cfg_is_updated = true;
+          }
+          if (C_Stealth.isUpdated())
+          {
+            settings->stealth = atoi(C_Stealth.value());
+            Serial.print(F("Stealth = ")); Serial.println(settings->stealth);
+            cfg_is_updated = true;
+          }
+          if (C_noTrack.isUpdated())
+          {
+            settings->no_track = atoi(C_noTrack.value());
+            Serial.print(F("noTrack = ")); Serial.println(settings->no_track);
+            cfg_is_updated = true;
+          }
+
+          if (cfg_is_updated) {
+            Serial.println();
+            Serial.println(F("Restart is in progress. Please, wait..."));
+            Serial.println();
+            Serial.flush();
+            EEPROM_store();
+            RF_Shutdown();
+            SoC->reset();
+          }
+        }
+      }
+#endif /* USE_NMEA_CFG */
     }
     if (GNSSbuf[GNSS_cnt] == '\n' || GNSS_cnt == sizeof(GNSSbuf)-1) {
       GNSS_cnt = 0;

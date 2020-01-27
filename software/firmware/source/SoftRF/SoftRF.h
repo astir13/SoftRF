@@ -1,6 +1,6 @@
 /*
  * SoftRF.h
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,29 +23,16 @@
 #include <Arduino.h>
 #endif /* ARDUINO */
 
+#if defined(ENERGIA_ARCH_CC13XX)
+#include <TimeLib.h>
+#endif /* ENERGIA_ARCH_CC13XX */
+
 #if defined(RASPBERRY_PI)
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.0-rc5"
-
-//#define TEST_PAW_ON_NICERF_SV610_FW466
-
-#define LOGGER_IS_ENABLED 0
-
-#if LOGGER_IS_ENABLED
-#define StdOut  LogFile
-#else
-#define StdOut  Serial
-#endif /* LOGGER_IS_ENABLED */
-
-#define PKT_SIZE  24  /* LEGACY_PAYLOAD_SIZE */
-
-/* Max. paket's payload size for all supported RF protocols */
-#define MAX_PKT_SIZE  32 
-
-#define RRB_SIZE  10
-#define MAX_TRACKING_OBJECTS    8
+#define SOFTRF_FIRMWARE_VERSION "1.0-rc7"
+#define SOFTRF_IDENT            "SoftRF-"
 
 #define ENTRY_EXPIRATION_TIME   10 /* seconds */
 #define LED_EXPIRATION_TIME     5 /* seconds */
@@ -81,12 +68,48 @@
 #define NMEA_UDP_PORT     10110
 #define NMEA_TCP_PORT     2000
 
+/*
+ * Serial I/O default values.
+ * Can be overridden by platfrom-specific code.
+ */
+#if !defined(SERIAL_IN_BR)
+/*
+ * 9600 is default value of NMEA baud rate
+ * for most of GNSS modules
+ * being used in SoftRF project
+ */
+#define SERIAL_IN_BR      9600
+#endif
+#if !defined(SERIAL_IN_BITS)
+#define SERIAL_IN_BITS    SERIAL_8N1
+#endif
+
+/*
+ * 38400 is known as maximum baud rate
+ * that HC-05 Bluetooth module
+ * can handle without symbols loss.
+ *
+ * Applicable for Standalone Edition. Inherited by most of other SoftRF platforms.
+ */
+#define STD_OUT_BR        38400
+#define STD_OUT_BITS      SERIAL_8N1
+
+#if !defined(SERIAL_OUT_BR)
+#define SERIAL_OUT_BR     STD_OUT_BR
+#endif
+#if !defined(SERIAL_OUT_BITS)
+#define SERIAL_OUT_BITS   STD_OUT_BITS
+#endif
+
+#define UAT_BOOT_BR       9600
+#define UAT_RECEIVER_BR   2000000
+
 #if defined(PREMIUM_PACKAGE) && !defined(RASPBERRY_PI)
 #define ENABLE_AHRS
 #endif /* PREMIUM_PACKAGE */
 
 typedef struct UFO {
-    String    raw;
+    uint8_t   raw[34];
     time_t    timestamp;
 
     uint8_t   protocol;
@@ -113,9 +136,13 @@ typedef struct UFO {
     uint16_t  hdop; /* cm */
     int8_t    rssi; /* SX1276 only */
 
+    /* 'legacy' specific data */
     float     distance;
     float     bearing;
     int8_t    alarm_level;
+
+    /* ADS-B (ES, UAT, GDL90) specific data */
+    uint8_t   callsign[8];
 } ufo_t;
 
 typedef struct hardware_info {
@@ -139,7 +166,8 @@ enum
 	SOFTRF_MODE_RELAY,
 	SOFTRF_MODE_TXRX_TEST,
 	SOFTRF_MODE_LOOPBACK,
-	SOFTRF_MODE_UAV
+	SOFTRF_MODE_UAV,
+	SOFTRF_MODE_RECEIVER
 };
 
 enum
@@ -147,19 +175,38 @@ enum
 	SOFTRF_MODEL_STANDALONE,
 	SOFTRF_MODEL_PRIME,
 	SOFTRF_MODEL_UAV,
-	SOFTRF_MODEL_PRIME_MK2
+	SOFTRF_MODEL_PRIME_MK2,
+	SOFTRF_MODEL_RASPBERRY,
+	SOFTRF_MODEL_UAT,
+	SOFTRF_MODEL_SKYVIEW,
+	SOFTRF_MODEL_RETRO,
+	SOFTRF_MODEL_SKYWATCH,
+	SOFTRF_MODEL_DONGLE
 };
 
 extern ufo_t ThisAircraft;
 extern hardware_info_t hw_info;
 extern const float txrx_test_positions[90][2] PROGMEM;
 
+extern void shutdown(const char *);
+
 #define TXRX_TEST_NUM_POSITIONS (sizeof(txrx_test_positions) / sizeof(float) / 2)
 #define TXRX_TEST_ALTITUDE    438.0
-#define TXRX_TEST_COURSE      0.0
+#define TXRX_TEST_COURSE      280.0
 #define TXRX_TEST_SPEED       50.0
+#define TXRX_TEST_VS          -300.0
 
 //#define ENABLE_TTN
 //#define ENABLE_BT_VOICE
+//#define TEST_PAW_ON_NICERF_SV610_FW466
+#define  DO_GDL90_FF_EXT
+
+#define LOGGER_IS_ENABLED 0
+
+#if LOGGER_IS_ENABLED
+#define StdOut  LogFile
+#else
+#define StdOut  Serial
+#endif /* LOGGER_IS_ENABLED */
 
 #endif /* SOFTRF_H */

@@ -1,6 +1,6 @@
 /*
  * Platform_ESP8266.cpp
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,21 @@ void ICACHE_FLASH_ATTR user_init()
 static void ESP8266_setup()
 {
 
+}
+
+static void ESP8266_loop()
+{
+
+}
+
+static void ESP8266_fini()
+{
+
+}
+
+static void ESP8266_reset()
+{
+  ESP.restart();
 }
 
 static uint32_t ESP8266_getChipId()
@@ -155,8 +170,12 @@ static IPAddress ESP8266_WiFi_get_broadcast()
 static void ESP8266_WiFi_transmit_UDP(int port, byte *buf, size_t size)
 {
   IPAddress ClientIP;
+  struct station_info *stat_info;
+  WiFiMode_t mode = WiFi.getMode();
 
-  if (WiFi.getMode() == WIFI_STA) {
+  switch (mode)
+  {
+  case WIFI_STA:
     ClientIP = ESP8266_WiFi_get_broadcast();
 
     swSer.enableRx(false);
@@ -167,8 +186,9 @@ static void ESP8266_WiFi_transmit_UDP(int port, byte *buf, size_t size)
 
     swSer.enableRx(true);
 
-  } else {
-    struct station_info *stat_info = wifi_softap_get_station_info();
+    break;
+  case WIFI_AP:
+    stat_info = wifi_softap_get_station_info();
 
     while (stat_info != NULL) {
       ClientIP = stat_info->ip.addr;
@@ -184,6 +204,10 @@ static void ESP8266_WiFi_transmit_UDP(int port, byte *buf, size_t size)
       stat_info = STAILQ_NEXT(stat_info, next);
     }
     wifi_softap_free_station_info();
+    break;
+  case WIFI_OFF:
+  default:
+    break;
   }
 }
 
@@ -195,6 +219,31 @@ static void ESP8266_WiFiUDP_stopAll()
 static bool ESP8266_WiFi_hostname(String aHostname)
 {
   return WiFi.hostname(aHostname);
+}
+
+static int ESP8266_WiFi_clients_count()
+{
+  struct station_info *stat_info;
+  int clients = 0;
+  WiFiMode_t mode = WiFi.getMode();
+
+  switch (mode)
+  {
+  case WIFI_AP:
+    stat_info = wifi_softap_get_station_info();
+
+    while (stat_info != NULL) {
+      clients++;
+
+      stat_info = STAILQ_NEXT(stat_info, next);
+    }
+    wifi_softap_free_station_info();
+
+    return clients;
+  case WIFI_STA:
+  default:
+    return -1; /* error */
+  }
 }
 
 static bool ESP8266_EEPROM_begin(size_t size)
@@ -224,6 +273,11 @@ static byte ESP8266_Display_setup()
 }
 
 static void ESP8266_Display_loop()
+{
+
+}
+
+static void ESP8266_Display_fini(const char *msg)
 {
 
 }
@@ -259,10 +313,33 @@ static bool ESP8266_Baro_setup() {
   return true;
 }
 
-SoC_ops_t ESP8266_ops = {
+static void ESP8266_UATSerial_begin(unsigned long baud)
+{
+  UATSerial.begin(baud);
+}
+
+static void ESP8266_CC13XX_restart()
+{
+  /* TBD */
+}
+
+static void ESP8266_WDT_setup()
+{
+  /* TBD */
+}
+
+static void ESP8266_WDT_fini()
+{
+  /* TBD */
+}
+
+const SoC_ops_t ESP8266_ops = {
   SOC_ESP8266,
   "ESP8266",
   ESP8266_setup,
+  ESP8266_loop,
+  ESP8266_fini,
+  ESP8266_reset,
   ESP8266_getChipId,
   ESP8266_getResetInfoPtr,
   ESP8266_getResetInfo,
@@ -271,10 +348,10 @@ SoC_ops_t ESP8266_ops = {
   ESP8266_Sound_test,
   ESP8266_maxSketchSpace,
   ESP8266_WiFi_setOutputPower,
-  ESP8266_WiFi_get_broadcast,
   ESP8266_WiFi_transmit_UDP,
   ESP8266_WiFiUDP_stopAll,
   ESP8266_WiFi_hostname,
+  ESP8266_WiFi_clients_count,
   ESP8266_EEPROM_begin,
   ESP8266_SPI_begin,
   ESP8266_swSer_begin,
@@ -282,11 +359,16 @@ SoC_ops_t ESP8266_ops = {
   NULL, /* ESP8266 has no built-in Bluetooth */
   ESP8266_Display_setup,
   ESP8266_Display_loop,
+  ESP8266_Display_fini,
   ESP8266_Battery_setup,
   ESP8266_Battery_voltage,
   ESP8266_GNSS_PPS_Interrupt_handler,
   ESP8266_get_PPS_TimeMarker,
-  ESP8266_Baro_setup
+  ESP8266_Baro_setup,
+  ESP8266_UATSerial_begin,
+  ESP8266_CC13XX_restart,
+  ESP8266_WDT_setup,
+  ESP8266_WDT_fini
 };
 
 #endif /* ESP8266 */

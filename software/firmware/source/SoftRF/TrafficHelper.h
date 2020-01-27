@@ -1,6 +1,6 @@
 /*
  * TrafficHelper.h
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #define TRAFFICHELPER_H
 
 #include "SoftRF.h"
+#include "SoCHelper.h"
 
 #define ALARM_ZONE_NONE       10000 /* zone range is 1000m <-> 10000m */
 #define ALARM_ZONE_LOW        1000  /* zone range is  700m <->  1000m */
@@ -46,7 +47,8 @@ void ParseData(void);
 void Traffic_setup(void);
 void Traffic_loop(void);
 void ClearExpired(void);
+void Traffic_Update(int);
 
-extern ufo_t fo, Container[MAX_TRACKING_OBJECTS];
+extern ufo_t fo, Container[MAX_TRACKING_OBJECTS], EmptyFO;
 
 #endif /* TRAFFICHELPER_H */

@@ -1,7 +1,18 @@
 /* local header used by libc/time routines */
 #include <_ansi.h>
 #include <time.h>
+
+#if !defined(ENERGIA_ARCH_CC13XX)
 #include <pgmspace.h>
+#if defined(ARDUINO_ARCH_STM32)
+#define	_AND		,
+#define	_CONST		const
+#define	_EXFUN(name, proto)		name proto
+#define	_DEFUN(name, arglist, args)	name(args)
+#endif
+#else
+#include <avr/pgmspace.h>
+#endif
 
 #define SECSPERMIN	60L
 #define MINSPERHOUR	60L

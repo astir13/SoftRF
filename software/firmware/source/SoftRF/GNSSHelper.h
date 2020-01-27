@@ -1,6 +1,6 @@
 /*
  * GNSSHelper.h
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,8 @@ enum
   GNSS_MODULE_U7,   /* Ublox 7 */
   GNSS_MODULE_U8,   /* Ublox 8 */
   GNSS_MODULE_U9,   /* reserved for Ublox 9 */
-  GNSS_MODULE_MAV   /* MAVLink */
+  GNSS_MODULE_MAV,  /* MAVLink */
+  GNSS_MODULE_S7XG  /* S7XG */
 };
 
 /*
@@ -47,11 +48,11 @@ enum
                            (gnss.altitude.age() <= NMEA_EXP_TIME) && \
                            (gnss.date.age()     <= NMEA_EXP_TIME))
 
-byte GNSS_setup();
-
-void GNSSTimeSync(void);
-void PickGNSSFix(void);
-int LookupSeparation(float, float);
+byte GNSS_setup      (void);
+void GNSS_fini       (void);
+void GNSSTimeSync    (void);
+void PickGNSSFix     (void);
+int LookupSeparation (float, float);
 
 extern TinyGPSPlus gnss;
 extern volatile unsigned long PPS_TimeMarker;

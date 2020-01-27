@@ -2,7 +2,7 @@
  *
  * Protocol_P3I.cpp
  * Encoder and decoder for PilotAware P3I radio protocol
- * Copyright (C) 2017-2018 Linar Yusupov
+ * Copyright (C) 2017-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,9 +24,11 @@
 
 #include "SoftRF.h"
 #include "Protocol_P3I.h"
+#include "Protocol_Legacy.h"
 #include "RFHelper.h"
 
 const rf_proto_desc_t p3i_proto_desc = {
+  "P3I",
   .type             = RF_PROTOCOL_P3I,
   .modulation_type  = RF_MODULATION_TYPE_2FSK,
   .preamble_type    = P3I_PREAMBLE_TYPE,
@@ -81,7 +83,7 @@ bool p3i_decode(void *p3i_pkt, ufo_t *this_aircraft, ufo_t *fop) {
   fop->course = (float) pkt->track;
   fop->speed = (float) pkt->knots;
 
-  fop->addr_type = ADDR_TYPE_PILOTAWARE;
+  fop->addr_type = ADDR_TYPE_P3I;
   fop->timestamp = timestamp;
 
   fop->vs = 0;

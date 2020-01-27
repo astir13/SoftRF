@@ -1,6 +1,6 @@
 /*
  * D1090Helper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ static void D1090_Out(byte *buf, size_t size)
   {
   case D1090_UART:
     {
-      Serial.write(buf, size);
+      SerialOutput.write(buf, size);
     }
     break;
   case D1090_BLUETOOTH:

@@ -7,7 +7,7 @@
  */
 
 #include <string.h>
-#if !defined(ESP8266) && !defined(ESP32) && !defined(RASPBERRY_PI)
+#if !defined(ESP8266) && !defined(ESP32) && !defined(RASPBERRY_PI) && !defined(ENERGIA_ARCH_CC13XX) && !defined(ARDUINO_ARCH_STM32)
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -18,10 +18,14 @@
 #ifdef ARDUINO
 #include <Arduino.h>
 #include <SPI.h>
+#if defined(ENERGIA_ARCH_CC13XX)
+#define _BV(bit) (1 << (bit))
+#endif /* ENERGIA_ARCH_CC13XX */
 #else
 #if !defined(RASPBERRY_PI)
 #include "nRF905_spi.h"
 #else
+#define SPI SPI0
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 #endif
@@ -158,17 +162,13 @@ void nRF905_init()
 #endif
 
 #if !NRF905_DR_SW
-	pinMode(DR, INPUT);
+	pinMode(DREADY, INPUT);
 #endif
 
 	digitalWrite(CSN, HIGH);
 	pinMode(CSN, OUTPUT);
 
-	SPI.begin(
-#if defined(ESP32)
-		5, 19, 27, 18
-#endif
-		);
+	SPI.begin();
 
 #if !defined(RASPBERRY_PI)
 	SPI.setClockDivider(SPI_CLOCK_DIV2);
@@ -428,7 +428,7 @@ static bool dataReady()
 #if NRF905_DR_SW
 	return (readStatus() & _BV(NRF905_STATUS_DR));
 #elif defined(ARDUINO)
-	return digitalRead(DR);
+	return digitalRead(DREADY);
 #else
 	return (DR_PORT & _BV(DR_BIT));
 #endif

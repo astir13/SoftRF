@@ -2,7 +2,7 @@
  *
  * Protocol_OGNTP.cpp
  * Encoder and decoder for Open Glider Network tracker radio protocol
- * Copyright (C) 2017-2018 Linar Yusupov
+ * Copyright (C) 2017-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "RFHelper.h"
 
 const rf_proto_desc_t ogntp_proto_desc = {
+  "OGNTP",
   .type            = RF_PROTOCOL_OGNTP,
   .modulation_type = RF_MODULATION_TYPE_2FSK,
   .preamble_type   = OGNTP_PREAMBLE_TYPE,
@@ -75,7 +76,21 @@ bool ogntp_decode(void *pkt, ufo_t *this_aircraft, ufo_t *fop) {
 //    return false;
 //  }
 
-  if( ogn_rx_pkt.Packet.Header.Other || ogn_rx_pkt.Packet.Header.Encrypted ) {
+  if ( ogn_rx_pkt.Packet.Header.Other || ogn_rx_pkt.Packet.Header.Encrypted ) {
+    return false;
+  }
+
+#if !defined(SOFTRF_ADDRESS)
+  uint8_t addr_type = ADDR_TYPE_ANONYMOUS;
+#else
+  uint8_t addr_type = (this_aircraft->addr == SOFTRF_ADDRESS ?
+                        ADDR_TYPE_ICAO : ADDR_TYPE_ANONYMOUS);
+#endif
+
+  /* ignore this device own (relayed) packets */
+  if ((ogn_rx_pkt.Packet.Header.Address    == this_aircraft->addr) &&
+      (ogn_rx_pkt.Packet.Header.AddrType   == addr_type          ) &&
+      (ogn_rx_pkt.Packet.Header.RelayCount > 0 )) {
     return false;
   }
 
@@ -112,7 +127,7 @@ size_t ogntp_encode(void *pkt, ufo_t *this_aircraft) {
   pos.Latitude = (int32_t) (this_aircraft->latitude * 600000);
   pos.Longitude = (int32_t) (this_aircraft->longitude * 600000);
   pos.Altitude = (int32_t) (this_aircraft->altitude * 10);
-  if (this_aircraft->pressure_altitude == 0.0) {
+  if (this_aircraft->pressure_altitude != 0.0) {
     pos.StdAltitude = (int32_t) (this_aircraft->pressure_altitude * 10);
     pos.ClimbRate = (int32_t) (this_aircraft->vs / (_GPS_FEET_PER_METER * 6.0));
   }
@@ -122,9 +137,17 @@ size_t ogntp_encode(void *pkt, ufo_t *this_aircraft) {
 
   pos.Encode(ogn_tx_pkt.Packet);
 
+  ogn_tx_pkt.Packet.HeaderWord=0;
   ogn_tx_pkt.Packet.Header.Address = this_aircraft->addr;
-  ogn_tx_pkt.Packet.Header.AddrType = ADDR_TYPE_OGN;
-  ogn_tx_pkt.Packet.Header.Parity = parity(ogn_tx_pkt.Packet.HeaderWord & 0x0FFFFFFF); /* lowest 28 bits */
+
+#if !defined(SOFTRF_ADDRESS)
+  ogn_tx_pkt.Packet.Header.AddrType = ADDR_TYPE_ANONYMOUS;
+#else
+  ogn_tx_pkt.Packet.Header.AddrType = (this_aircraft->addr == SOFTRF_ADDRESS ?
+                                      ADDR_TYPE_ICAO : ADDR_TYPE_ANONYMOUS);
+#endif
+
+  ogn_tx_pkt.Packet.calcAddrParity();
 
   ogn_tx_pkt.Packet.Position.AcftType = (int16_t) this_aircraft->aircraft_type;
   ogn_tx_pkt.Packet.Position.Stealth = (int16_t) this_aircraft->stealth;

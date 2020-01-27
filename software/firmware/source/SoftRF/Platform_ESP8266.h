@@ -1,6 +1,6 @@
 /*
  * Platform_ESP8266.h
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  */
 #if defined(ESP8266)
 
-#ifndef ESP8266HELPER_H
-#define ESP8266HELPER_H
+#ifndef PLATFORM_ESP8266_H
+#define PLATFORM_ESP8266_H
 
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -28,6 +28,13 @@
 #include <Exp_SoftwareSerial.h>
 #include <ESP8266FtpServer.h>
 #include <Adafruit_NeoPixel.h>
+
+/* Maximum of tracked flying objects is now SoC-specific constant */
+#define MAX_TRACKING_OBJECTS    8
+
+#define EEPROM_commit()         EEPROM.commit()
+
+#define isValidFix()            isValidGNSSFix()
 
 #define uni_begin()             strip.begin()
 #define uni_show()              strip.show()
@@ -67,6 +74,9 @@
 #define SOC_GPIO_PIN_SDA      D2
 #define SOC_GPIO_PIN_SCL      D4
 
+#define SerialOutput          Serial
+#define UATSerial             Serial /* TBD */
+
 extern "C" {
 #include <user_interface.h>
 }
@@ -75,6 +85,12 @@ extern ESP8266WebServer server;
 extern Exp_SoftwareSerial swSer;
 extern Adafruit_NeoPixel strip;
 
-#endif /* ESP8266HELPER_H */
+#define USE_NMEALIB
+
+#if defined(pgm_read_float_aligned)
+#define pgm_read_float(addr)  pgm_read_float_aligned(addr)
+#endif
+
+#endif /* PLATFORM_ESP8266_H */
 
 #endif /* ESP8266 */

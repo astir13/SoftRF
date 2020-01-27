@@ -1,6 +1,6 @@
 /*
  * NMEAHelper.h
- * Copyright (C) 2017-2018 Linar Yusupov
+ * Copyright (C) 2017-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,10 +31,15 @@ enum
 	NMEA_BLUETOOTH
 };
 
-#define NMEA_BUFFER_SIZE  128
+#define NMEA_BUFFER_SIZE    128
+#define NMEA_CALLSIGN_SIZE  (3 /* prefix */ + 1 /* _ */ + 6 /* ICAO */ + 1 /* EOL */)
+
+#define PSRFC_VERSION       1
+#define MAX_PSRFC_LEN       64
 
 void NMEA_setup(void);
 void NMEA_loop(void);
+void NMEA_fini();
 void NMEA_Export(void);
 void NMEA_Position(void);
 void NMEA_Out(byte *, size_t, bool);
@@ -55,5 +60,13 @@ typedef struct NmeaTCP_struct {
 #define NMEATCP_ACK_TIMEOUT    2 /* seconds */
 
 #endif
+
+#if !defined(PFLAU_EXT1_FMT)
+#define PFLAU_EXT1_FMT  ""
+#endif /* PFLAU_EXT1_FMT */
+
+#if !defined(PFLAU_EXT1_ARGS)
+#define PFLAU_EXT1_ARGS
+#endif /* PFLAU_EXT1_ARGS */
 
 #endif /* NMEAHELPER_H */

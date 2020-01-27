@@ -1,6 +1,6 @@
 /*
  * GDL90Helper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * Inspired by Eric's Dey Python GDL-90 encoder:
  * https://github.com/etdey/gdl90
@@ -30,6 +30,8 @@
 #include "SoCHelper.h"
 #include "WiFiHelper.h"
 #include "TrafficHelper.h"
+#include "Protocol_Legacy.h"
+#include "NMEAHelper.h"
 
 #if defined(ENABLE_AHRS)
 #include "AHRSHelper.h"
@@ -67,6 +69,25 @@ const uint8_t aircraft_type_to_gdl90[] PROGMEM = {
 	GDL90_EMITTER_CATEGORY_UAV,
 	GDL90_EMITTER_CATEGORY_UNASSIGNED1,
 	GDL90_EMITTER_CATEGORY_NONE
+};
+
+const uint8_t gdl90_to_aircraft_type[] PROGMEM = {
+	AIRCRAFT_TYPE_UNKNOWN,
+	AIRCRAFT_TYPE_POWERED,
+	AIRCRAFT_TYPE_POWERED,
+	AIRCRAFT_TYPE_JET,
+	AIRCRAFT_TYPE_JET,
+	AIRCRAFT_TYPE_JET,
+	AIRCRAFT_TYPE_POWERED,
+	AIRCRAFT_TYPE_HELICOPTER,
+	AIRCRAFT_TYPE_RESERVED,
+	AIRCRAFT_TYPE_GLIDER,
+	AIRCRAFT_TYPE_BALLOON,
+	AIRCRAFT_TYPE_PARACHUTE,
+	AIRCRAFT_TYPE_HANGGLIDER,
+	AIRCRAFT_TYPE_RESERVED,
+	AIRCRAFT_TYPE_UAV,
+	AIRCRAFT_TYPE_RESERVED
 };
 
 #if defined(DO_GDL90_FF_EXT)
@@ -261,18 +282,27 @@ static void *msgType10and20(ufo_t *aircraft)
   Traffic.track         = (trackHeading & 0xFF) /* 0x03 */;
   Traffic.emit_cat      = AT_TO_GDL90(aircraft->aircraft_type) /* 0x4 */;
 
-  memcpy((char *)Traffic.callsign, GDL90_CallSign_Prefix[aircraft->protocol],
-    strlen(GDL90_CallSign_Prefix[aircraft->protocol]));
+  /*
+   * When callsign is available - send it to a GDL90 client.
+   * If it is not - generate a callsign substitute,
+   * based upon a protocol ID and the ICAO address
+   */
+  if (strnlen((char *) aircraft->callsign, sizeof(aircraft->callsign)) > 0) {
+    memcpy(Traffic.callsign, aircraft->callsign, sizeof(Traffic.callsign));
+  } else {
+    memcpy((char *)Traffic.callsign, GDL90_CallSign_Prefix[aircraft->protocol],
+      strlen(GDL90_CallSign_Prefix[aircraft->protocol]));
 
-  String str = "";
+    String str = "";
 
-  ADDR_TO_HEX_STR(str, (aircraft->addr >> 16) & 0xFF);
-  ADDR_TO_HEX_STR(str, (aircraft->addr >>  8) & 0xFF);
-  ADDR_TO_HEX_STR(str, (aircraft->addr      ) & 0xFF);
+    ADDR_TO_HEX_STR(str, (aircraft->addr >> 16) & 0xFF);
+    ADDR_TO_HEX_STR(str, (aircraft->addr >>  8) & 0xFF);
+    ADDR_TO_HEX_STR(str, (aircraft->addr      ) & 0xFF);
 
-  str.toUpperCase();
-  memcpy((char *)Traffic.callsign + strlen(GDL90_CallSign_Prefix[aircraft->protocol]),
-    str.c_str(), str.length());
+    str.toUpperCase();
+    memcpy((char *)Traffic.callsign + strlen(GDL90_CallSign_Prefix[aircraft->protocol]),
+      str.c_str(), str.length());
+  }
 
   Traffic.emerg_code    = 0 /* 0x5 */;
 //Traffic.reserved      = 0;
@@ -403,7 +433,7 @@ static void GDL90_Out(byte *buf, size_t size)
     {
     case GDL90_UART:
       {
-        Serial.write(buf, size);
+        SerialOutput.write(buf, size);
       }
       break;
     case GDL90_UDP:
@@ -431,7 +461,8 @@ void GDL90_Export()
   size_t size;
   float distance;
   time_t this_moment = now();
-  uint8_t *buf = (uint8_t *) UDPpacketBuffer;
+  uint8_t *buf = (uint8_t *) (sizeof(UDPpacketBuffer) < UDP_PACKET_BUFSIZE ?
+                              NMEABuffer : UDPpacketBuffer);
 
   if (settings->gdl90 != GDL90_OFF) {
     size = makeHeartbeat(buf);
@@ -447,11 +478,13 @@ void GDL90_Export()
     GDL90_Out(buf, size);
 #endif /* ENABLE_AHRS */
 
-    size = makeOwnershipReport(buf, &ThisAircraft);
-    GDL90_Out(buf, size);
+    if (isValidFix()) {
+      size = makeOwnershipReport(buf, &ThisAircraft);
+      GDL90_Out(buf, size);
 
-    size = makeGeometricAltitude(buf, &ThisAircraft);
-    GDL90_Out(buf, size);
+      size = makeGeometricAltitude(buf, &ThisAircraft);
+      GDL90_Out(buf, size);
+    }
 
     for (int i=0; i < MAX_TRACKING_OBJECTS; i++) {
       if (Container[i].addr && (this_moment - Container[i].timestamp) <= EXPORT_EXPIRATION_TIME) {

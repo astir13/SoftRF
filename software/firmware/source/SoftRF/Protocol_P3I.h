@@ -1,6 +1,6 @@
 /*
  * Protocol_P3I.h
- * Copyright (C) 2017-2018 Linar Yusupov
+ * Copyright (C) 2017-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,8 +58,6 @@
  * 24 byte packet
  * data rate of 38.4kb/s
  */
-
-#include "RFHelper.h"
 
 #if !defined(TEST_PAW_ON_NICERF_SV610_FW466)
 /* Valid for NiceRF SV650 firmware revision: "SV650_PA_VER1.1" */
@@ -145,8 +143,6 @@
 
 #define P3I_TX_INTERVAL_MIN 1600 /* in ms */
 #define P3I_TX_INTERVAL_MAX 1800
-
-#define ADDR_TYPE_PILOTAWARE  0
 
 /*
  * Example:

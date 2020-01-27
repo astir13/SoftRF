@@ -1,6 +1,6 @@
 /*
  * SoCHelper.h
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,17 @@
 #include "Platform_ESP8266.h"
 #include "Platform_ESP32.h"
 #include "Platform_RPi.h"
+#include "Platform_CC13XX.h"
+#include "Platform_STM32.h"
 #include "BluetoothHelper.h"
 
 typedef struct SoC_ops_struct {
   uint8_t id;
   const char name[16];
   void (*setup)();
+  void (*loop)();
+  void (*fini)();
+  void (*reset)();
   uint32_t (*getChipId)();
   void* (*getResetInfoPtr)();
   String (*getResetInfo)();
@@ -39,10 +44,10 @@ typedef struct SoC_ops_struct {
   void (*Sound_test)(int);
   uint32_t (*maxSketchSpace)();
   void (*WiFi_setOutputPower)(int);
-  IPAddress (*WiFi_get_broadcast)();
   void (*WiFi_transmit_UDP)(int, byte *, size_t);
   void (*WiFiUDP_stopAll)();
   bool (*WiFi_hostname)(String);
+  int  (*WiFi_clients_count)();
   bool (*EEPROM_begin)(size_t);
   void (*SPI_begin)();
   void (*swSer_begin)(unsigned long);
@@ -50,11 +55,16 @@ typedef struct SoC_ops_struct {
   Bluetooth_ops_t *Bluetooth;
   byte (*Display_setup)();
   void (*Display_loop)();
+  void (*Display_fini)(const char *);
   void (*Battery_setup)();
   float (*Battery_voltage)();
   void (*GNSS_PPS_handler)();
   unsigned long (*get_PPS_TimeMarker)();
   bool (*Baro_setup)();
+  void (*UATSerial_begin)(unsigned long);
+  void (*CC13XX_restart)();
+  void (*WDT_setup)();
+  void (*WDT_fini)();
 } SoC_ops_t;
 
 enum
@@ -62,20 +72,29 @@ enum
 	SOC_NONE,
 	SOC_ESP8266,
 	SOC_ESP32,
-  SOC_RPi
+	SOC_RPi,
+	SOC_CC13XX,
+	SOC_STM32
 };
 
-extern SoC_ops_t *SoC;
+extern const SoC_ops_t *SoC;
 #if defined(ESP8266)
-extern SoC_ops_t ESP8266_ops;
+extern const SoC_ops_t ESP8266_ops;
 #endif
 #if defined(ESP32)
-extern SoC_ops_t ESP32_ops;
+extern const SoC_ops_t ESP32_ops;
 #endif
 #if defined(RASPBERRY_PI)
-extern SoC_ops_t RPi_ops;
+extern const SoC_ops_t RPi_ops;
+#endif
+#if defined(ENERGIA_ARCH_CC13XX)
+extern const SoC_ops_t CC13XX_ops;
+#endif
+#if defined(ARDUINO_ARCH_STM32)
+extern const SoC_ops_t STM32_ops;
 #endif
 
 byte SoC_setup(void);
+void SoC_fini(void);
 
 #endif /* SOCHELPER_H */

@@ -1,6 +1,6 @@
 /*
  * LEDHelper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ static unsigned long status_LED_TimeMarker = 0;
 // on a live circuit...if you must, connect GND first.
 
 void LED_setup() {
-  if (settings->pointer != LED_OFF) {
+  if (SOC_GPIO_PIN_LED != SOC_UNUSED_PIN && settings->pointer != LED_OFF) {
     uni_begin();
     uni_show(); // Initialize all pixels to 'off'
   }
@@ -43,7 +43,8 @@ void LED_setup() {
 
   if (status_LED != SOC_UNUSED_PIN) {
     pinMode(status_LED, OUTPUT);
-    digitalWrite(status_LED, LOW);
+    /* Indicate positive power supply */
+    digitalWrite(status_LED, HIGH);
   }
 }
 
@@ -68,14 +69,14 @@ static void theaterChase(color_t c, uint8_t wait) {
       delay(wait);
 
       for (int i = 0; i < uni_numPixels(); i = i + 3) {
-        uni_setPixelColor(i + q, 0);      //turn every third pixel off
+        uni_setPixelColor(i + q, LED_COLOR_BLACK);      //turn every third pixel off
       }
     }
   }
 }
 
 void LED_test() {
-  if (settings->pointer != LED_OFF) {
+  if (SOC_GPIO_PIN_LED != SOC_UNUSED_PIN && settings->pointer != LED_OFF) {
     // Some example procedures showing how to display to the pixels:
     colorWipe(uni_Color(255, 0, 0), 50); // Red
     colorWipe(uni_Color(0, 255, 0), 50); // Green
@@ -123,13 +124,13 @@ static void LED_Clear_noflush() {
     }
 
     uni_setPixelColor(LED_STATUS_POWER,
-      Battery_voltage() > 2.3 ? LED_COLOR_MI_GREEN : LED_COLOR_MI_RED);
+      Battery_voltage() > Battery_threshold() ? LED_COLOR_MI_GREEN : LED_COLOR_MI_RED);
     uni_setPixelColor(LED_STATUS_SAT,
-      isValidGNSSFix() ? LED_COLOR_MI_GREEN : LED_COLOR_MI_RED);
+      isValidFix() ? LED_COLOR_MI_GREEN : LED_COLOR_MI_RED);
 }
 
 void LED_Clear() {
-  if (settings->pointer != LED_OFF) {
+  if (SOC_GPIO_PIN_LED != SOC_UNUSED_PIN && settings->pointer != LED_OFF) {
     LED_Clear_noflush();
 
     SoC->swSer_enableRx(false);
@@ -143,7 +144,7 @@ void LED_DisplayTraffic() {
   int led_num;
   color_t color;
 
-  if (settings->pointer != LED_OFF) {
+  if (SOC_GPIO_PIN_LED != SOC_UNUSED_PIN && settings->pointer != LED_OFF) {
     LED_Clear_noflush();
 
     for (int i=0; i < MAX_TRACKING_OBJECTS; i++) {
@@ -184,9 +185,10 @@ void LED_DisplayTraffic() {
 
 void LED_loop() {
   if (status_LED != SOC_UNUSED_PIN) {
-    if (Battery_voltage() > 3.5 ) {
-      if (digitalRead(status_LED)) {
-        digitalWrite(status_LED, LOW);
+    if (Battery_voltage() > Battery_threshold() ) {
+      /* Indicate positive power supply */
+      if (digitalRead(status_LED) == LOW) {
+        digitalWrite(status_LED, HIGH);
       }
     } else {
       if (isTimeToToggle()) {

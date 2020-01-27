@@ -17,6 +17,10 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
+#if defined(ENERGIA_ARCH_CC13XX)
+#include <cc13xx/cc13xx.h>
+#endif /* ENERGIA_ARCH_CC13XX */
+
 #include "../lmic.h"
 #include "hal.h"
 #include <stdio.h>
@@ -66,8 +70,14 @@ void hal_pin_rst (u1_t val) {
     if(val == 0 || val == 1) { // drive pin
         pinMode(lmic_pins.rst, OUTPUT);
         digitalWrite(lmic_pins.rst, val);
-    } else { // keep pin floating
+    } else {
         pinMode(lmic_pins.rst, INPUT);
+#if defined(RASPBERRY_PI)
+        //  with a pullup
+        bcm2835_gpio_set_pud(lmic_pins.rst, BCM2835_GPIO_PUD_UP);
+#else
+        // keep pin floating
+#endif
     }
 }
 
@@ -169,25 +179,29 @@ static void hal_io_check() {
 // SPI
 
 #ifdef RASPBERRY_PI
-// Clock divider / 32 = 8MHz
-static const SPISettings settings(BCM2835_SPI_CLOCK_DIVIDER_32 , BCM2835_SPI_BIT_ORDER_MSBFIRST, BCM2835_SPI_MODE0);
+// Raspberry Pi 2:
+//    BCM2835_CORE_CLK_HZ = 250000000
+//    Clock divider / 64 = 3.906 MHz
+static const SPISettings settings(BCM2835_SPI_CLOCK_DIVIDER_64, BCM2835_SPI_BIT_ORDER_MSBFIRST, BCM2835_SPI_MODE0);
 #else
 static const SPISettings settings(LMIC_SPI_FREQ, MSBFIRST, SPI_MODE0);
 #endif
 
 static void hal_spi_init () {
-    SPI.begin(
-#if defined(ESP32)
-        5, 19, 27, 18
+#if defined(ENERGIA_ARCH_CC13XX)
+    SPI.setClockDivider(SPI_CLOCK_MAX / LMIC_SPI_FREQ);
 #endif
-    );
+    SPI.begin();
 }
 
 void hal_pin_nss (u1_t val) {
+
+#if defined(SPI_HAS_TRANSACTION)
     if (!val)
         SPI.beginTransaction(settings);
     else
         SPI.endTransaction();
+#endif
 
     //Serial.println(val?">>":"<<");
     digitalWrite(lmic_pins.nss, val);
@@ -203,6 +217,78 @@ u1_t hal_spi (u1_t out) {
     Serial.println(res, HEX);
     */
     return res;
+}
+
+static u1_t spi_buf[MAX_LEN_FRAME + 1];
+
+u1_t hal_spi_read_reg (u1_t addr) {
+    hal_pin_nss(0);
+#if !defined(ENERGIA_ARCH_CC13XX)
+    hal_spi(addr & 0x7F);
+    u1_t val = hal_spi(0x00);
+#else
+    spi_buf[0] = addr & 0x7F;
+    spi_buf[1] = 0;
+    SPI.transfer(spi_buf, 2);
+    u1_t val = spi_buf[1];
+#endif
+    hal_pin_nss(1);
+    return val;
+}
+
+void hal_spi_write_reg (u1_t addr, u1_t data) {
+    hal_pin_nss(0);
+#if !defined(ENERGIA_ARCH_CC13XX)
+    hal_spi(addr | 0x80);
+    hal_spi(data);
+#else
+    spi_buf[0] = addr | 0x80;
+    spi_buf[1] = data;
+    SPI.transfer(spi_buf, 2);
+#endif
+    hal_pin_nss(1);
+}
+
+void hal_spi_read_buf (u1_t addr, u1_t* buf, u1_t len, u1_t inv) {
+    hal_pin_nss(0);
+#if !defined(ENERGIA_ARCH_CC13XX)
+    hal_spi(addr & 0x7F);
+    u1_t i=0;
+    for (i=0; i<len; i++) {
+        buf[i] = (inv == 0 ? hal_spi(0x00) : ~(hal_spi(0x00)));
+    }
+#else
+    spi_buf[0] = addr & 0x7F;
+    u1_t i = 0;
+    for (i=0; i<len; i++) {
+        spi_buf[i+1] = 0;
+    }
+    SPI.transfer(spi_buf, len+1);
+    for (i=0; i<len; i++) {
+        buf[i] = (inv == 0 ? spi_buf[i+1] : ~spi_buf[i+1]);
+    }
+#endif
+    hal_pin_nss(1);
+}
+
+
+void hal_spi_write_buf (u1_t addr, u1_t* buf, u1_t len, u1_t inv) {
+    hal_pin_nss(0);
+#if !defined(ENERGIA_ARCH_CC13XX)
+    hal_spi(addr | 0x80);
+    u1_t i = 0;
+    for (i=0; i<len; i++) {
+        hal_spi(inv == 0 ? buf[i] : ~buf[i]);
+    }
+#else
+    spi_buf[0] = addr | 0x80;
+    u1_t i = 0;
+    for (i=0; i<len; i++) {
+        spi_buf[i+1] = (inv == 0 ? buf[i] : ~buf[i]);
+    }
+    SPI.transfer(spi_buf, len+1);
+#endif
+    hal_pin_nss(1);
 }
 
 // -----------------------------------------------------------------------------
@@ -281,6 +367,31 @@ u1_t hal_checkTimer (u4_t time) {
     return delta_time(time) <= 0;
 }
 
+#if defined(ARDUINO_ARCH_STM32)
+
+// Fix for STM32 HAL based cores.
+
+// ARDUINO_ARCH_STM32 appears to be defined for these Arduino cores:
+// - Arduino_Core_STM32 (aka stm32duino)
+// - STM32GENERIC
+// - BSFrance-stm32
+
+// This fix solves an issue with STM32 HAL based Arduino cores where
+// a call to os_init() hangs the MCU. The fix prevents LMIC-Arduino from
+// disabling and re-enabling interrupts.
+// While the exact cause is not known, it is assumed that disabling interrupts
+// may conflict with interrupts required for the STM32 HAL core.
+// (Possible side-effects on LMIC timing have not been checked.)
+
+void hal_disableIRQs () {
+}
+
+void hal_enableIRQs () {
+    hal_io_check();
+}
+
+#else /* ARDUINO_ARCH_STM32 */
+
 static uint8_t irqlevel = 0;
 
 void hal_disableIRQs () {
@@ -303,6 +414,8 @@ void hal_enableIRQs () {
         hal_io_check();
     }
 }
+
+#endif /* ARDUINO_ARCH_STM32 */
 
 void hal_sleep () {
     // Not implemented

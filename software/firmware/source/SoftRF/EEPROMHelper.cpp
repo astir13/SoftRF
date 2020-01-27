@@ -1,6 +1,6 @@
 /*
  * EEPROMHelper.cpp
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include "GDL90Helper.h"
 #include "D1090Helper.h"
 #include "JSONHelper.h"
+#include "BatteryHelper.h"
 
 // start reading from the first byte (address 0) of the EEPROM
 
@@ -40,6 +41,7 @@ void EEPROM_setup()
     Serial.print(F("ERROR: Failed to initialize "));
     Serial.print(sizeof(eeprom_t));
     Serial.println(F(" bytes of EEPROM!"));
+    Serial.flush();
     delay(1000000);
   }
 
@@ -48,7 +50,7 @@ void EEPROM_setup()
   }
 
   if (eeprom_block.field.magic != SOFTRF_EEPROM_MAGIC) {
-    Serial.println(F("Warning! EEPROM magic mismatch! Loading defaults..."));
+    Serial.println(F("WARNING! User defined settings are not initialized yet. Loading defaults..."));
 
     EEPROM_defaults();
   } else {
@@ -56,7 +58,7 @@ void EEPROM_setup()
     Serial.println(eeprom_block.field.version);
 
     if (eeprom_block.field.version != SOFTRF_EEPROM_VERSION) {
-      Serial.println(F("Warning! EEPROM version mismatch! Loading defaults..."));
+      Serial.println(F("WARNING! Version mismatch of user defined settings. Loading defaults..."));
 
       EEPROM_defaults();
     }
@@ -66,28 +68,42 @@ void EEPROM_setup()
 
 void EEPROM_defaults()
 {
-  eeprom_block.field.magic = SOFTRF_EEPROM_MAGIC;
-  eeprom_block.field.version = SOFTRF_EEPROM_VERSION;
-  eeprom_block.field.settings.mode = SOFTRF_MODE_NORMAL;
-  eeprom_block.field.settings.rf_protocol = RF_PROTOCOL_OGNTP;
-  eeprom_block.field.settings.band = RF_BAND_EU;
+  eeprom_block.field.magic                  = SOFTRF_EEPROM_MAGIC;
+  eeprom_block.field.version                = SOFTRF_EEPROM_VERSION;
+  eeprom_block.field.settings.mode          = SOFTRF_MODE_NORMAL;
+  eeprom_block.field.settings.rf_protocol   = RF_PROTOCOL_OGNTP;
+  eeprom_block.field.settings.band          = RF_BAND_EU;
   eeprom_block.field.settings.aircraft_type = AIRCRAFT_TYPE_GLIDER;
-  eeprom_block.field.settings.txpower = RF_TX_POWER_FULL;
-  eeprom_block.field.settings.volume = BUZZER_VOLUME_FULL;
-  eeprom_block.field.settings.pointer = DIRECTION_NORTH_UP;
-  eeprom_block.field.settings.bluetooth = BLUETOOTH_OFF;
-  eeprom_block.field.settings.alarm = TRAFFIC_ALARM_DISTANCE;
+  eeprom_block.field.settings.txpower       = RF_TX_POWER_FULL;
+  eeprom_block.field.settings.bluetooth     = BLUETOOTH_OFF;
+  eeprom_block.field.settings.alarm         = TRAFFIC_ALARM_DISTANCE;
 
-  eeprom_block.field.settings.nmea_g   = true;
-  eeprom_block.field.settings.nmea_p   = false;
-  eeprom_block.field.settings.nmea_l   = true;
-  eeprom_block.field.settings.nmea_s   = true;
-  eeprom_block.field.settings.nmea_out = NMEA_UART;
-  eeprom_block.field.settings.gdl90    = GDL90_OFF;
-  eeprom_block.field.settings.d1090    = D1090_OFF;
-  eeprom_block.field.settings.json     = JSON_OFF;
-  eeprom_block.field.settings.stealth  = false;
-  eeprom_block.field.settings.no_track = false;
+  /* This will speed up 'factory' boot sequence on Editions other than Standalone */
+  if (hw_info.model == SOFTRF_MODEL_STANDALONE) {
+    eeprom_block.field.settings.volume      = BUZZER_VOLUME_FULL;
+    eeprom_block.field.settings.pointer     = DIRECTION_NORTH_UP;
+  } else {
+    eeprom_block.field.settings.volume      = BUZZER_OFF;
+    eeprom_block.field.settings.pointer     = LED_OFF;
+  }
+
+  eeprom_block.field.settings.nmea_g     = true;
+  eeprom_block.field.settings.nmea_p     = false;
+  eeprom_block.field.settings.nmea_l     = true;
+  eeprom_block.field.settings.nmea_s     = true;
+
+#if defined(USBD_USE_CDC) && !defined(DISABLE_GENERIC_SERIALUSB)
+  eeprom_block.field.settings.nmea_out   = NMEA_BLUETOOTH;  /* STM32 USB */
+#else
+  eeprom_block.field.settings.nmea_out   = NMEA_UART;
+#endif
+
+  eeprom_block.field.settings.gdl90      = GDL90_OFF;
+  eeprom_block.field.settings.d1090      = D1090_OFF;
+  eeprom_block.field.settings.json       = JSON_OFF;
+  eeprom_block.field.settings.stealth    = false;
+  eeprom_block.field.settings.no_track   = false;
+  eeprom_block.field.settings.power_save = POWER_SAVE_NONE;
 }
 
 void EEPROM_store()
@@ -96,5 +112,5 @@ void EEPROM_store()
     EEPROM.write(i, eeprom_block.raw[i]);  
   }
 
-  EEPROM.commit();
+  EEPROM_commit();
 }

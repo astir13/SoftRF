@@ -1,6 +1,6 @@
 /*
  * Protocol.h
- * Copyright (C) 2017-2018 Linar Yusupov
+ * Copyright (C) 2017-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,20 +52,23 @@ enum
 	RF_CHECKSUM_TYPE_CCITT_0000,
 	RF_CHECKSUM_TYPE_CCITT_1D02,
 	RF_CHECKSUM_TYPE_GALLAGER,
-	RF_CHECKSUM_TYPE_CRC8_107
+	RF_CHECKSUM_TYPE_CRC8_107,
+	RF_CHECKSUM_TYPE_RS
 };
 
 enum
 {
 	RF_BITRATE_100KBPS,
-	RF_BITRATE_38400
+	RF_BITRATE_38400,
+	RF_BITRATE_1042KBPS
 };
 
 enum
 {
 	RF_FREQUENCY_DEVIATION_19_2KHZ,
 	RF_FREQUENCY_DEVIATION_25KHZ,
-	RF_FREQUENCY_DEVIATION_50KHZ
+	RF_FREQUENCY_DEVIATION_50KHZ,
+	RF_FREQUENCY_DEVIATION_625KHZ
 };
 
 enum
@@ -89,32 +92,34 @@ enum
 	RF_RX_BANDWIDTH_SS_125KHZ,
 	RF_RX_BANDWIDTH_SS_166KHZ,
 	RF_RX_BANDWIDTH_SS_200KHZ,
-	RF_RX_BANDWIDTH_SS_250KHZ
+	RF_RX_BANDWIDTH_SS_250KHZ,
+	RF_RX_BANDWIDTH_SS_1567KHZ
 };
 
 #define RF_MAX_SYNC_WORD_SIZE  8
 
 typedef struct RF_PROTOCOL {
-    uint8_t   type;
-    uint8_t   modulation_type;
-    uint8_t   preamble_type;
-    uint8_t   preamble_size;
-    uint8_t   syncword[RF_MAX_SYNC_WORD_SIZE];
-    uint8_t   syncword_size;
-    uint32_t  net_id;
-    uint8_t   payload_type;
-    uint8_t   payload_size;
-    uint8_t   payload_offset;
-    uint8_t   crc_type;
-    uint8_t   crc_size;
+    const char name[10];
+    uint8_t    type;
+    uint8_t    modulation_type;
+    uint8_t    preamble_type;
+    uint8_t    preamble_size;
+    uint8_t    syncword[RF_MAX_SYNC_WORD_SIZE];
+    uint8_t    syncword_size;
+    uint32_t   net_id;
+    uint8_t    payload_type;
+    uint8_t    payload_size;
+    uint8_t    payload_offset;
+    uint8_t    crc_type;
+    uint8_t    crc_size;
 
-    uint8_t   bitrate;
-    uint8_t   deviation;
-    uint8_t   whitening;
-    uint8_t   bandwidth;
+    uint8_t    bitrate;
+    uint8_t    deviation;
+    uint8_t    whitening;
+    uint8_t    bandwidth;
 
-    uint16_t  tx_interval_min;
-    uint16_t  tx_interval_max;
+    uint16_t   tx_interval_min;
+    uint16_t   tx_interval_max;
 } rf_proto_desc_t;
 
 #endif /* PROTOCOL_H */

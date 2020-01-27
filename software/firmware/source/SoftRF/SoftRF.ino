@@ -1,6 +1,6 @@
 /*
  * SoftRF(.ino) firmware
- * Copyright (C) 2016-2018 Linar Yusupov
+ * Copyright (C) 2016-2020 Linar Yusupov
  *
  * Author: Linar Yusupov, linar.r.yusupov@gmail.com
  *
@@ -21,11 +21,26 @@
  *   OGN library is developed by Pawel Jalocha
  *   NMEA library is developed by Timur Sinitsyn, Tobias Simon, Ferry Huberts
  *   ADS-B encoder C++ library is developed by yangbinbin (yangbinbin_ytu@163.com)
+ *   Arduino Core for ESP32 is developed by Hristo Gochkov
+ *   ESP32 BT SPP library is developed by Evandro Copercini
  *   Adafruit BMP085 library is developed by Limor Fried and Ladyada
  *   Adafruit BMP280 library is developed by Kevin Townsend
  *   Adafruit MPL3115A2 library is developed by Limor Fried and Kevin Townsend
  *   U8g2 monochrome LCD, OLED and eInk library is developed by Oliver Kraus
  *   NeoPixelBus library is developed by Michael Miller
+ *   jQuery library is developed by JS Foundation
+ *   EGM96 data is developed by XCSoar team
+ *   BCM2835 C library is developed by Mike McCauley
+ *   SimpleNetwork library is developed by Dario Longobardi
+ *   ArduinoJson library is developed by Benoit Blanchon
+ *   Flashrom library is part of the flashrom.org project
+ *   Arduino Core for TI CC13X0 is developed by Energia team
+ *   EasyLink library is developed by Robert Wessels and Tony Cave
+ *   Dump978 library is developed by Oliver Jowett
+ *   FEC library is developed by Phil Karn
+ *   AXP202X and S7XG libraries are developed by Lewis He
+ *   Arduino Core for STM32 is developed by Frederic Pillon
+ *   TFT library is developed by Bodmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,15 +113,26 @@ void setup()
 
   resetInfo = (rst_info *) SoC->getResetInfoPtr();
 
-  Serial.begin(38400);
+  Serial.begin(SERIAL_OUT_BR);
 
 #if LOGGER_IS_ENABLED
   Logger_setup();
 #endif /* LOGGER_IS_ENABLED */
 
+  Serial.println();
+  Serial.print(F(SOFTRF_IDENT));
+  Serial.print(SoC->name);
+  Serial.print(F(" FW.REV: " SOFTRF_FIRMWARE_VERSION " DEV.ID: "));
+  Serial.println(String(SoC->getChipId(), HEX));
+  Serial.println(F("Copyright (C) 2015-2020 Linar Yusupov. All rights reserved."));
+  Serial.flush();
+
   Serial.println(""); Serial.print(F("Reset reason: ")); Serial.println(resetInfo->reason);
   Serial.println(SoC->getResetReason());
   Serial.print(F("Free heap size: ")); Serial.println(ESP.getFreeHeap());
+#if defined(ESP32_DEVEL_CORE)
+  Serial.print(F("PSRAM: ")); Serial.println(psramFound() ? F("found") : F("not found"));
+#endif
   Serial.println(SoC->getResetInfo()); Serial.println("");
 
   EEPROM_setup();
@@ -115,8 +141,12 @@ void setup()
 
   hw_info.rf = RF_setup();
 
-  if (hw_info.model == SOFTRF_MODEL_PRIME_MK2 && RF_SX1276_RST_is_connected)
-      hw_info.revision = 5;
+  if (hw_info.model    == SOFTRF_MODEL_PRIME_MK2 &&
+      hw_info.revision == 2                      &&
+      RF_SX1276_RST_is_connected)
+  {
+    hw_info.revision = 5;
+  }
 
   delay(100);
 
@@ -182,6 +212,8 @@ void setup()
     SoC->swSer_enableRx(true);
     break;
   }
+
+  SoC->WDT_setup();
 }
 
 void loop()
@@ -228,7 +260,34 @@ void loop()
   Logger_loop();
 #endif /* LOGGER_IS_ENABLED */
 
+  SoC->loop();
+
+  Battery_loop();
+
   yield();
+}
+
+void shutdown(const char *msg)
+{
+  SoC->WDT_fini();
+
+  SoC->swSer_enableRx(false);
+
+  NMEA_fini();
+
+  Web_fini();
+
+  WiFi_fini();
+
+  if (settings->mode != SOFTRF_MODE_UAV) {
+    GNSS_fini();
+  }
+
+  SoC->Display_fini(msg);
+
+  RF_Shutdown();
+
+  SoC_fini();
 }
 
 void normal_loop()
@@ -246,7 +305,7 @@ void normal_loop()
   GNSSTimeSync();
 
   ThisAircraft.timestamp = now();
-  if (isValidGNSSFix()) {
+  if (isValidFix()) {
     ThisAircraft.latitude = gnss.location.lat();
     ThisAircraft.longitude = gnss.location.lng();
     ThisAircraft.altitude = gnss.altitude.meters();
@@ -267,7 +326,7 @@ void normal_loop()
       ThisAircraft.altitude -= ThisAircraft.geoid_separation;
     }
 
-    RF_Transmit(RF_Encode());
+    RF_Transmit(RF_Encode(&ThisAircraft), true);
   }
 
   success = RF_Receive();
@@ -276,18 +335,18 @@ void normal_loop()
   success = true;
 #endif
 
-  if (success && isValidGNSSFix()) ParseData();
+  if (success && isValidFix()) ParseData();
 
 #if defined(ENABLE_TTN)
   TTN_loop();
 #endif
 
-  if (isValidGNSSFix()) {
+  if (isValidFix()) {
     Traffic_loop();
   }
 
   if (isTimeToDisplay()) {
-    if (isValidGNSSFix()) {
+    if (isValidFix()) {
       LED_DisplayTraffic();
     } else {
       LED_Clear();
@@ -295,10 +354,13 @@ void normal_loop()
     LEDTimeMarker = millis();
   }
 
-  if (isTimeToExport() && isValidGNSSFix()) {
+  if (isTimeToExport()) {
     NMEA_Export();
-    GDL90_Export();
-    D1090_Export();
+
+    if (isValidFix()) {
+      GDL90_Export();
+      D1090_Export();
+    }
     ExportTimeMarker = millis();
   }
 
@@ -329,7 +391,7 @@ void uav_loop()
     ThisAircraft.pressure_altitude = the_aircraft.location.baro_alt;
     ThisAircraft.hdop = the_aircraft.location.gps_hdop;
 
-    RF_Transmit(RF_Encode());
+    RF_Transmit(RF_Encode(&ThisAircraft), true);
   }
 
   success = RF_Receive();
@@ -348,21 +410,27 @@ void bridge_loop()
 {
   bool success;
 
-  size_t tx_size = Raw_Receive_UDP(&TxPkt[0]);
+  size_t tx_size = Raw_Receive_UDP(&TxBuffer[0]);
 
   if (tx_size > 0) {
-    RF_Transmit(tx_size);
+    RF_Transmit(tx_size, true);
   }
 
   success = RF_Receive();
 
   if(success)
   {
+    size_t rx_size = RF_Payload_Size(settings->rf_protocol);
+    rx_size = rx_size > sizeof(fo.raw) ? sizeof(fo.raw) : rx_size;
 
-    fo.raw = Bin2Hex(RxBuffer);
+    memset(fo.raw, 0, sizeof(fo.raw));
+    memcpy(fo.raw, RxBuffer, rx_size);
 
     if (settings->nmea_p) {
-      StdOut.print(F("$PSRFI,")); StdOut.print(now()); StdOut.print(F(",")); StdOut.println(fo.raw);
+      StdOut.print(F("$PSRFI,"));
+      StdOut.print((unsigned long) now());    StdOut.print(F(","));
+      StdOut.print(Bin2Hex(fo.raw, rx_size)); StdOut.print(F(","));
+      StdOut.println(RF_last_rssi);
     }
 
     Raw_Transmit_UDP();
@@ -381,10 +449,17 @@ void watchout_loop()
   success = RF_Receive();
 
   if (success) {
-    fo.raw = Bin2Hex(RxBuffer);
+    size_t rx_size = RF_Payload_Size(settings->rf_protocol);
+    rx_size = rx_size > sizeof(fo.raw) ? sizeof(fo.raw) : rx_size;
+
+    memset(fo.raw, 0, sizeof(fo.raw));
+    memcpy(fo.raw, RxBuffer, rx_size);
 
     if (settings->nmea_p) {
-      StdOut.print(F("$PSRFI,")); StdOut.print(now()); StdOut.print(F(",")); StdOut.println(fo.raw);
+      StdOut.print(F("$PSRFI,"));
+      StdOut.print((unsigned long) now());    StdOut.print(F(","));
+      StdOut.print(Bin2Hex(fo.raw, rx_size)); StdOut.print(F(","));
+      StdOut.println(RF_last_rssi);
     }
   }
 
@@ -418,6 +493,7 @@ void txrx_test_loop()
   ThisAircraft.altitude = TXRX_TEST_ALTITUDE;
   ThisAircraft.course = TXRX_TEST_COURSE;
   ThisAircraft.speed = TXRX_TEST_SPEED;
+  ThisAircraft.vs = TXRX_TEST_VS;
 
 #if DEBUG_TIMING
   baro_start_ms = millis();
@@ -434,7 +510,7 @@ void txrx_test_loop()
 #if DEBUG_TIMING
   tx_start_ms = millis();
 #endif
-  RF_Transmit(RF_Encode());
+  RF_Transmit(RF_Encode(&ThisAircraft), true);
 #if DEBUG_TIMING
   tx_end_ms = millis();
   rx_start_ms = millis();

@@ -1,6 +1,6 @@
 #
 # Makefile.RPi
-# Copyright (C) 2018 Linar Yusupov
+# Copyright (C) 2018-2020 Linar Yusupov
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,11 +18,10 @@
 CC            = gcc
 CXX           = g++
 
-CFLAGS        = -g -DRASPBERRY_PI -DBCM2835_NO_DELAY_COMPATIBILITY \
+CFLAGS        = -g -MMD -DRASPBERRY_PI -DBCM2835_NO_DELAY_COMPATIBILITY \
                 -D__BASEFILE__=\"$*\"
 
-CXXFLAGS      = -g -std=c++11 -DRASPBERRY_PI -DBCM2835_NO_DELAY_COMPATIBILITY \
-                -D__BASEFILE__=\"$*\"
+CXXFLAGS      = -std=c++11 $(CFLAGS)
 
 LMIC_PATH     = ../libraries/arduino-lmic/src
 NRF905_PATH   = ../libraries/nRF905
@@ -37,21 +36,35 @@ ADSB_PATH     = ../libraries/adsb_encoder
 NMEALIB_PATH  = ../libraries/nmealib/src
 GEOID_PATH    = ../libraries/Geoid
 JSON_PATH     = ../libraries/ArduinoJson/src
+TCPSRV_PATH   = ../libraries/SimpleNetwork/src
+DUMP978_PATH  = ../libraries/dump978/src
+GFX_PATH      = ../libraries/Adafruit-GFX-Library
+EPD2_PATH     = ../libraries/GxEPD2/src
 
 INCLUDE       = -I$(LMIC_PATH)   -I$(NRF905_PATH)  -I$(TIMELIB_PATH)  \
                 -I$(CRCLIB_PATH) -I$(OGNLIB_PATH)  -I$(GNSSLIB_PATH)  \
                 -I$(BCMLIB_PATH) -I$(MAVLINK_PATH) -I$(AIRCRAFT_PATH) \
                 -I$(ADSB_PATH)   -I$(NMEALIB_PATH) -I$(GEOID_PATH) \
-                -I$(JSON_PATH)
+                -I$(JSON_PATH)   -I$(TCPSRV_PATH)  -I$(DUMP978_PATH) \
+                -I$(GFX_PATH)    -I$(EPD2_PATH)
 
-OBJS          := RFHelper.o SoCHelper.o Platform_RPi.o \
-                 Protocol_Legacy.o Protocol_P3I.o Protocol_FANET.o Protocol_OGNTP.o \
-                 D1090Helper.o GDL90Helper.o NMEAHelper.o JSONHelper.o \
-                 TrafficHelper.o  GNSSHelper.o \
+CPPS          := RFHelper.cpp SoCHelper.cpp \
+                 Protocol_Legacy.cpp Protocol_P3I.cpp Protocol_FANET.cpp \
+                 Protocol_OGNTP.cpp Protocol_UAT978.cpp \
+                 D1090Helper.cpp GDL90Helper.cpp NMEAHelper.o JSONHelper.cpp \
+                 TrafficHelper.cpp GNSSHelper.cpp EPDHelper.cpp Library.cpp
+
+#                 $(LMIC_PATH)/raspi/HardwareSerial.o $(LMIC_PATH)/raspi/cbuf.o \
+#                 $(LMIC_PATH)/raspi/Print.o $(LMIC_PATH)/raspi/Stream.o \
+#                 $(LMIC_PATH)/raspi/wiring.o $(LMIC_PATH)/raspi/raspberry_pi_revision.o \
+
+OBJS          := $(CPPS:.cpp=.o) \
                  $(CRCLIB_PATH)/lib_crc.o \
-                 $(LMIC_PATH)/raspi/raspi.o $(LMIC_PATH)/raspi/WString.o \
+                 $(LMIC_PATH)/raspi/raspi.o \
+                 $(LMIC_PATH)/raspi/WString.o \
+                 $(LMIC_PATH)/raspi/TTYSerial.o \
                  $(LMIC_PATH)/lmic/radio.o $(LMIC_PATH)/lmic/oslmic.o \
-                 $(LMIC_PATH)/lmic/lmic.o $(LMIC_PATH)/hal/hal.o \
+                 $(LMIC_PATH)/lmic/lmic.o \
                  $(OGNLIB_PATH)/ldpc.o \
                  $(GNSSLIB_PATH)/TinyGPS++.o \
                  $(TIMELIB_PATH)/Time.o \
@@ -62,19 +75,38 @@ OBJS          := RFHelper.o SoCHelper.o Platform_RPi.o \
                  $(NMEALIB_PATH)/sentence.o $(NMEALIB_PATH)/validate.o \
                  $(NMEALIB_PATH)/gpgga.o $(NMEALIB_PATH)/gprmc.o \
                  $(NMEALIB_PATH)/gpvtg.o $(NMEALIB_PATH)/gpgsv.o \
-                 $(NMEALIB_PATH)/gpgsa.o
+                 $(NMEALIB_PATH)/gpgsa.o \
+                 $(TCPSRV_PATH)/TCPServer.o \
+                 $(DUMP978_PATH)/fec.o $(DUMP978_PATH)/fec/init_rs_char.o \
+                 $(DUMP978_PATH)/uat_decode.o $(DUMP978_PATH)/fec/decode_rs_char.o \
+                 $(GFX_PATH)/Adafruit_GFX.o $(LMIC_PATH)/raspi/Print.o \
+                 $(EPD2_PATH)/GxEPD2_EPD.o $(EPD2_PATH)/epd/GxEPD2_270.o
 
 LIBS          := -L$(BCMLIB_PATH) -lbcm2835 -lpthread
 
-PROGRAM       := SoftRF
+PROGNAME      := SoftRF
 
-all: bcm $(PROGRAM)
+DEPS          := $(OBJS:.o=.d)
+
+all: bcm $(PROGNAME) $(PROGNAME)-aux
 
 %.o: %.cpp
 				$(CXX) -c $(CXXFLAGS) $*.cpp -o $*.o $(INCLUDE)
 
 %.o: %.c
 				$(CC) -c $(CFLAGS) $*.c -o $*.o $(INCLUDE)
+
+hal.o: $(LMIC_PATH)/hal/hal.cpp
+				$(CXX) $(CXXFLAGS) -c $(LMIC_PATH)/hal/hal.cpp $(INCLUDE) -o hal.o
+
+hal-aux.o: $(LMIC_PATH)/hal/hal.cpp
+				$(CXX) $(CXXFLAGS) -DUSE_SPI1 -c $(LMIC_PATH)/hal/hal.cpp $(INCLUDE) -o hal-aux.o
+
+Platform_RPi.o: Platform_RPi.cpp
+				$(CXX) $(CXXFLAGS) -c Platform_RPi.cpp $(INCLUDE) -o Platform_RPi.o
+
+Platform_RPi-aux.o: Platform_RPi.cpp
+				$(CXX) $(CXXFLAGS) -DUSE_SPI1 -c Platform_RPi.cpp $(INCLUDE) -o Platform_RPi-aux.o
 
 aes.o: $(LMIC_PATH)/aes/lmic.c
 				$(CXX) $(CXXFLAGS) -c $(LMIC_PATH)/aes/lmic.c $(INCLUDE) -o aes.o
@@ -85,11 +117,15 @@ $(LMIC_PATH)/lmic/%.o: $(LMIC_PATH)/lmic/%.c
 bcm:
 				(cd $(BCMLIB_PATH)/../ ; ./configure ; make)
 
-$(PROGRAM): $(OBJS) aes.o
-				$(CXX) $(OBJS) aes.o $(LIBS) -o $(PROGRAM)
+$(PROGNAME): $(OBJS) aes.o hal.o Platform_RPi.o
+				$(CXX) $(OBJS) aes.o hal.o Platform_RPi.o $(LIBS) -o $(PROGNAME)
+
+$(PROGNAME)-aux: $(OBJS) aes.o hal-aux.o Platform_RPi-aux.o
+				$(CXX) $(OBJS) aes.o hal-aux.o Platform_RPi-aux.o $(LIBS) -o $(PROGNAME)-aux
 
 bcm-clean:
 				(cd $(BCMLIB_PATH)/../ ; make distclean)
 
 clean: bcm-clean
-				rm -f $(OBJS) aes.o $(PROGRAM)
+				rm -f $(OBJS) $(DEPS) aes.o hal.o hal-aux.o \
+				Platform_RPi.o Platform_RPi-aux.o $(PROGNAME) $(PROGNAME)-aux *.d

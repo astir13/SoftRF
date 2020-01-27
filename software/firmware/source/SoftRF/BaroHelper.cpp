@@ -1,6 +1,6 @@
 /*
  * BaroHelper.cpp
- * Copyright (C) 2018 Linar Yusupov
+ * Copyright (C) 2018-2020 Linar Yusupov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,9 +168,25 @@ barochip_ops_t mpl3115a2_ops = {
 
 bool Baro_probe()
 {
-  return ( (baro_chip = &bmp180_ops,    baro_chip->probe()) ||
+  return (
+#if !defined(EXCLUDE_BMP180)
+           (baro_chip = &bmp180_ops,    baro_chip->probe()) ||
+#else
+           false                                            ||
+#endif /* EXCLUDE_BMP180 */
+
+#if !defined(EXCLUDE_BMP280)
            (baro_chip = &bmp280_ops,    baro_chip->probe()) ||
-           (baro_chip = &mpl3115a2_ops, baro_chip->probe()) );
+#else
+           false                                            ||
+#endif /* EXCLUDE_BMP280 */
+
+#if !defined(EXCLUDE_MPL3115A2)
+           (baro_chip = &mpl3115a2_ops, baro_chip->probe())
+#else
+           false
+#endif /* EXCLUDE_MPL3115A2 */
+         );
 }
 
 byte Baro_setup()
