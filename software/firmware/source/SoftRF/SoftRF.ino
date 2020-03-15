@@ -159,7 +159,7 @@ void setup()
   if (settings->mode == SOFTRF_MODE_UAV) {
     Serial.begin(57600);
     MAVLink_setup();
-    ThisAircraft.aircraft_type = AIRCRAFT_TYPE_UAV;  
+    ThisAircraft.aircraft_type = AIRCRAFT_TYPE_UAV;
   }  else {
     hw_info.gnss = GNSS_setup();
     ThisAircraft.aircraft_type = settings->aircraft_type;
@@ -357,10 +357,12 @@ void normal_loop()
   if (isTimeToExport()) {
     NMEA_Export();
 
+#if defined(ENABLE_GPS_NMEA_OUT)
     if (isValidFix()) {
       GDL90_Export();
       D1090_Export();
     }
+#endif
     ExportTimeMarker = millis();
   }
 
