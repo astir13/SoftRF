@@ -134,7 +134,7 @@ uint8_t parity(uint32_t x) {
     }
     return (parity % 2);
 }
- 
+
 byte RF_setup(void)
 {
 
@@ -233,8 +233,6 @@ void RF_SetChannel(void)
     tm.Minute = gnss.time.minute();
     tm.Second = gnss.time.second();
 
-    Time = makeTime(tm) + (gnss.time.age() - time_corr_neg + time_corr_pos)/ 1000;
-    Serial.print("RF_SetChannel:Time="); Serial.println(Time);
     break;
   }
 
@@ -338,7 +336,7 @@ bool RF_Receive(void)
   if (RF_ready && rf_chip) {
     rval = rf_chip->receive();
   }
-  
+
   return rval;
 }
 
@@ -584,7 +582,7 @@ bool sx1276_probe()
 
   hal_pin_rst(2); // configure RST pin floating!
   hal_waitUntil(os_getTime()+ms2osticks(5)); // wait 5ms
-  
+
   v = sx1276_readReg(SX1276_RegVersion);
 
   SPI.end();
@@ -597,7 +595,7 @@ bool sx1276_probe()
 
     return true;
   } else {
-    return false;  
+    return false;
   }
 }
 
@@ -947,7 +945,7 @@ void sx1276_tx(unsigned char *buf, size_t size, osjobcb_t func) {
     crc16 = 0xffff;  /* seed value */
     break;
   }
-  
+
   os_radio(RADIO_RST); // Stop RX first
   delay(1); // Wait a bit, without this os_radio below asserts, apparently because the state hasn't changed yet
 
