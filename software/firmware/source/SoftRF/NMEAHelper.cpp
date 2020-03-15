@@ -137,6 +137,7 @@ void NMEA_loop()
     snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAV,A,2.00,6.82,OBSTACLE NEW*")); /* FLARM ver. 6.82 faked */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
+    PFLAV_TimeMarker = millis();
   }
 
 #if defined(ENABLE_AHRS)
