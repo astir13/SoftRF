@@ -52,6 +52,9 @@ const char *NMEA_CallSign_Prefix[] = {
   [RF_PROTOCOL_FANET]     = "FAN"
 };
 
+#define isTimeToPFLAV() (millis() - PFLAV_TimeMarker > 10000) /* PFLAV all 10 seconds */
+unsigned long PFLAV_TimeMarker = 0;
+
 #define isTimeToPGRMZ() (millis() - PGRMZ_TimeMarker > 1000)
 unsigned long PGRMZ_TimeMarker = 0;
 
@@ -128,6 +131,12 @@ void NMEA_loop()
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
 
     PGRMZ_TimeMarker = millis();
+  }
+
+  if (isTimeToPFLAV()) {
+    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAV,A,2.00,6.82,OBSTACLE NEW*")); /* FLARM ver. 6.82 faked */
+    NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
+    NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
   }
 
 #if defined(ENABLE_AHRS)
