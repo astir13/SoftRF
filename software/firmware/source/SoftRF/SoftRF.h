@@ -31,8 +31,9 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.0-rc7"
+#define SOFTRF_FIRMWARE_VERSION "1.1a"
 #define SOFTRF_IDENT            "SoftRF-"
+#define SOFTRF_ADDRESS 0x458C58
 
 #define ENTRY_EXPIRATION_TIME   10 /* seconds */
 #define LED_EXPIRATION_TIME     5 /* seconds */
@@ -42,8 +43,8 @@
  * If you need for SoftRF to operate in wireless
  * client mode - specify your local AP's SSID/PSK:
  *
- * #define MY_ACCESSPOINT_SSID "My_AP_SSID"
- * #define MY_ACCESSPOINT_PSK  "My_AP_PSK"
+ * 
+ * 
  *
  * If SoftRF's built-in AP is not stable enough for you, consider
  * to use "reverse" operation when your smartphone is acting
@@ -52,6 +53,9 @@
  * #define MY_ACCESSPOINT_SSID "AndroidAP"
  * #define MY_ACCESSPOINT_PSK  "12345678"
  */
+
+#define MY_ACCESSPOINT_SSID "mahewakan71"
+#define MY_ACCESSPOINT_PSK  "EinHaseSprangUbersHaus"
 
 // Default mode is AP with
 // SSID: SoftRF-XXXXXX
