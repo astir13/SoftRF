@@ -19,12 +19,10 @@
 #ifndef SKYVIEW_H
 #define SKYVIEW_H
 
-#define SKYVIEW_FIRMWARE_VERSION  "0.9"
+#define SKYVIEW_FIRMWARE_VERSION  "0.10"
 
 #define DEFAULT_AP_SSID   "SoftRF-abc123"
 #define DEFAULT_AP_PSK    "12345678"
-#define DEFAULT_BT_NAME   "SoftRF-abc123"
-#define DEFAULT_BT_KEY    "1234"
 
 #define RELAY_DST_PORT    12390
 #define RELAY_SRC_PORT    (RELAY_DST_PORT - 1)
@@ -93,7 +91,8 @@ enum
 	CON_SERIAL,
 	CON_WIFI_UDP,
 	CON_WIFI_TCP,
-	CON_BLUETOOTH
+	CON_BLUETOOTH_SPP,
+	CON_BLUETOOTH_LE
 };
 
 enum
@@ -187,12 +186,20 @@ enum
 
 enum
 {
-	BLUETOOTH_OFF,
-	BLUETOOTH_SPP
+	POWER_SAVE_NONE,
+	POWER_SAVE_WIFI
 };
 
 enum
 {
+	TRAFFIC_FILTER_OFF,
+	TRAFFIC_FILTER_500M,
+	TRAFFIC_FILTER_1500M
+};
+
+enum
+{
+	DB_NONE,
 	DB_AUTO,
 	DB_FLN,
 	DB_OGN,
@@ -202,5 +209,6 @@ enum
 extern hardware_info_t hw_info;
 
 extern void shutdown(const char *);
+extern void Input_loop(void);
 
 #endif /* SKYVIEW_H */

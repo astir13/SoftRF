@@ -58,6 +58,20 @@ hardware_info_t hw_info = {
   .display  = DISPLAY_NONE
 };
 
+/* Poll input source(s) */
+void Input_loop() {
+  switch (settings->protocol)
+  {
+  case PROTOCOL_GDL90:
+    GDL90_loop();
+    break;
+  case PROTOCOL_NMEA:
+  default:
+    NMEA_loop();
+    break;
+  }
+}
+
 void setup()
 {
   hw_info.soc = SoC_setup(); // Has to be very first procedure in the execution order
@@ -65,20 +79,17 @@ void setup()
   delay(300);
   Serial.begin(SERIAL_OUT_BR); Serial.println();
 
+  Serial.println();
+  Serial.print(F("SkyView-"));
+  Serial.print(SoC->name);
+  Serial.print(F(" FW.REV: " SKYVIEW_FIRMWARE_VERSION " DEV.ID: "));
+  Serial.println(String(SoC->getChipId(), HEX));
+  Serial.println(F("Copyright (C) 2019-2020 Linar Yusupov. All rights reserved."));
+  Serial.flush();
+
   EEPROM_setup();
   Battery_setup();
   SoC->Button_setup();
-
-  Serial.print(F("Intializing E-ink display module (may take up to 10 seconds)... "));
-  Serial.flush();
-  hw_info.display = EPD_setup();
-  if (hw_info.display != DISPLAY_NONE) {
-    Serial.println(F(" done."));
-  } else {
-    Serial.println(F(" failed!"));
-  }
-
-  WiFi_setup();
 
   switch (settings->protocol)
   {
@@ -90,6 +101,25 @@ void setup()
     NMEA_setup();
     break;
   }
+
+  /* If a Dongle is connected - try to wake it up */
+  if (settings->connection == CON_SERIAL &&
+      settings->protocol   == PROTOCOL_NMEA) {
+    SerialInput.write("$PSRFC,?*47\r\n");
+    SerialInput.flush();
+  }
+
+  Serial.println();
+  Serial.print(F("Intializing E-ink display module (may take up to 10 seconds)... "));
+  Serial.flush();
+  hw_info.display = EPD_setup();
+  if (hw_info.display != DISPLAY_NONE) {
+    Serial.println(F(" done."));
+  } else {
+    Serial.println(F(" failed!"));
+  }
+
+  WiFi_setup();
 
   SoC->DB_init();
 
@@ -103,16 +133,11 @@ void setup()
 
 void loop()
 {
-  switch (settings->protocol)
-  {
-  case PROTOCOL_GDL90:
-    GDL90_loop();
-    break;
-  case PROTOCOL_NMEA:
-  default:
-    NMEA_loop();
-    break;
+  if (SoC->Bluetooth) {
+    SoC->Bluetooth->loop();
   }
+
+  Input_loop();
 
   Traffic_loop();
 
@@ -133,6 +158,17 @@ void loop()
 void shutdown(const char *msg)
 {
   SoC->WDT_fini();
+
+  /* If a Dongle is connected - try to shut it down */
+  if (settings->connection == CON_SERIAL &&
+      settings->protocol   == PROTOCOL_NMEA) {
+    SerialInput.write("$PSRFC,OFF*37\r\n");
+    SerialInput.flush();
+  }
+
+  if (SoC->Bluetooth) {
+    SoC->Bluetooth->fini();
+  }
 
   Web_fini();
 

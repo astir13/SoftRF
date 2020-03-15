@@ -111,9 +111,11 @@ static union {
   uint64_t chipmacid;
 };
 
-static sqlite3 *fln_db;
-static sqlite3 *ogn_db;
-static sqlite3 *icao_db;
+static sqlite3 *fln_db  = NULL;
+static sqlite3 *ogn_db  = NULL;
+static sqlite3 *icao_db = NULL;
+
+static uint8_t sdcard_files_to_open = 0;
 
 SPIClass SPI1(HSPI);
 
@@ -373,47 +375,84 @@ static size_t ESP32_WiFi_Receive_UDP(uint8_t *buf, size_t max_size)
   return WiFi_Receive_UDP(buf, max_size);
 }
 
+static int ESP32_WiFi_clients_count()
+{
+  WiFiMode_t mode = WiFi.getMode();
+
+  switch (mode)
+  {
+  case WIFI_AP:
+    wifi_sta_list_t stations;
+    ESP_ERROR_CHECK(esp_wifi_ap_get_sta_list(&stations));
+
+    tcpip_adapter_sta_list_t infoList;
+    ESP_ERROR_CHECK(tcpip_adapter_get_sta_list(&stations, &infoList));
+
+    return infoList.num;
+  case WIFI_STA:
+  default:
+    return -1; /* error */
+  }
+}
+
 static bool ESP32_DB_init()
 {
+  bool rval = false;
+
   if (settings->adapter != ADAPTER_TTGO_T5S) {
-    return false;
+    return rval;
   }
 
-  if (!SD.begin(SOC_SD_PIN_SS_T5S, SPI1)) {
+  sdcard_files_to_open += (settings->adb   == DB_FLN    ? 1 : 0);
+  sdcard_files_to_open += (settings->adb   == DB_OGN    ? 1 : 0);
+  sdcard_files_to_open += (settings->adb   == DB_ICAO   ? 1 : 0);
+  sdcard_files_to_open += (settings->voice != VOICE_OFF ? 1 : 0);
+
+  if (!SD.begin(SOC_SD_PIN_SS_T5S, SPI1, 4000000, "/sd", sdcard_files_to_open)) {
     Serial.println(F("ERROR: Failed to mount microSD card."));
-    return false;
+    return rval;
+  }
+
+  if (settings->adb == DB_NONE) {
+    return rval;
   }
 
   sqlite3_initialize();
 
-  sqlite3_open("/sd/Aircrafts/fln.db", &fln_db);
+  if (settings->adb == DB_FLN) {
+    sqlite3_open("/sd/Aircrafts/fln.db", &fln_db);
 
-  if (fln_db == NULL)
-  {
-    Serial.println(F("Failed to open FlarmNet DB\n"));
-    return false;
+    if (fln_db == NULL)
+    {
+      Serial.println(F("Failed to open FlarmNet DB\n"));
+    }  else {
+      rval = true;
+    }
   }
 
-  sqlite3_open("/sd/Aircrafts/ogn.db", &ogn_db);
+  if (settings->adb == DB_OGN) {
+    sqlite3_open("/sd/Aircrafts/ogn.db", &ogn_db);
 
-  if (ogn_db == NULL)
-  {
-    Serial.println(F("Failed to open OGN DB\n"));
-    sqlite3_close(fln_db);
-    return false;
+    if (ogn_db == NULL)
+    {
+      Serial.println(F("Failed to open OGN DB\n"));
+    }  else {
+      rval = true;
+    }
   }
 
-  sqlite3_open("/sd/Aircrafts/icao.db", &icao_db);
+  if (settings->adb == DB_ICAO) {
+    sqlite3_open("/sd/Aircrafts/icao.db", &icao_db);
 
-  if (icao_db == NULL)
-  {
-    Serial.println(F("Failed to open ICAO DB\n"));
-    sqlite3_close(fln_db);
-    sqlite3_close(ogn_db);
-    return false;
+    if (icao_db == NULL)
+    {
+      Serial.println(F("Failed to open ICAO DB\n"));
+    }  else {
+      rval = true;
+    }
   }
 
-  return true;
+  return rval;
 }
 
 static bool ESP32_DB_query(uint8_t type, uint32_t id, char *buf, size_t size)
@@ -526,19 +565,21 @@ static void ESP32_DB_fini()
 {
   if (settings->adapter == ADAPTER_TTGO_T5S) {
 
-    if (fln_db != NULL) {
-      sqlite3_close(fln_db);
-    }
+    if (settings->adb != DB_NONE) {
+      if (fln_db != NULL) {
+        sqlite3_close(fln_db);
+      }
 
-    if (ogn_db != NULL) {
-      sqlite3_close(ogn_db);
-    }
+      if (ogn_db != NULL) {
+        sqlite3_close(ogn_db);
+      }
 
-    if (icao_db != NULL) {
-      sqlite3_close(icao_db);
-    }
+      if (icao_db != NULL) {
+        sqlite3_close(icao_db);
+      }
 
-    sqlite3_shutdown();
+      sqlite3_shutdown();
+    }
 
     SD.end();
   }
@@ -570,9 +611,10 @@ int readProps(File file, wavProperties_t *wavProps)
   return n;
 }
 
-static void play_file(char *filename)
+static bool play_file(char *filename)
 {
   headerState_t state = HEADER_RIFF;
+  bool rval = false;
 
   File wavfile = SD.open(filename);
 
@@ -635,71 +677,16 @@ static void play_file(char *filename)
       }
     }
     wavfile.close();
+    rval = true;
   } else {
     Serial.println(F("error opening WAV file"));
   }
   if (state == DATA) {
     i2s_driver_uninstall((i2s_port_t)i2s_num); //stop & destroy i2s driver
   }
+
+  return rval;
 }
-
-static void play_memory(const unsigned char *data, int size)
-{
-  headerState_t state = HEADER_RIFF;
-  wavRiff_t *wavRiff;
-  wavProperties_t *props;
-
-  while (size > 0) {
-    switch(state){
-    case HEADER_RIFF:
-      wavRiff = (wavRiff_t *) data;
-
-      if(wavRiff->chunkID == CCCC('R', 'I', 'F', 'F') && wavRiff->format == CCCC('W', 'A', 'V', 'E')){
-        state = HEADER_FMT;
-      }
-      data += sizeof(wavRiff_t);
-      size -= sizeof(wavRiff_t);
-      break;
-
-    case HEADER_FMT:
-      props = (wavProperties_t *) data;
-      state = HEADER_DATA;
-      data += sizeof(wavProperties_t);
-      size -= sizeof(wavProperties_t);
-      break;
-
-    case HEADER_DATA:
-      uint32_t chunkId, chunkSize;
-      chunkId = *((uint32_t *) data);
-      data += sizeof(uint32_t);
-      size -= sizeof(uint32_t);
-      chunkSize = *((uint32_t *) data);
-      state = DATA;
-      data += sizeof(uint32_t);
-      size -= sizeof(uint32_t);
-
-      //initialize i2s with configurations above
-      i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
-      i2s_set_pin((i2s_port_t)i2s_num, &pin_config);
-      //set sample rates of i2s to sample rate of wav file
-      i2s_set_sample_rates((i2s_port_t)i2s_num, props->sampleRate);
-      break;
-
-      /* after processing wav file, it is time to process music data */
-    case DATA:
-      i2s_write_sample_nb(*((uint32_t *) data));
-      data += sizeof(uint32_t);
-      size -= sizeof(uint32_t);
-      break;
-    }
-  }
-
-  if (state == DATA) {
-    i2s_driver_uninstall((i2s_port_t)i2s_num); //stop & destroy i2s driver
-  }
-}
-
-#include "Melody.h"
 
 static void ESP32_TTS(char *message)
 {
@@ -734,6 +721,9 @@ static void ESP32_TTS(char *message)
           word = strtok (NULL, " ");
 
           yield();
+
+          /* Poll input source(s) */
+          Input_loop();
       }
 
       if (wdt_status) {
@@ -742,7 +732,15 @@ static void ESP32_TTS(char *message)
     }
   } else {
     if (settings->voice != VOICE_OFF && settings->adapter == ADAPTER_TTGO_T5S) {
-      play_memory(melody_wav, (int) melody_wav_len);
+
+      strcpy(filename, WAV_FILE_PREFIX);
+      strcat(filename, "POST");
+      strcat(filename, WAV_FILE_SUFFIX);
+
+      if (SD.cardType() == CARD_NONE || !play_file(filename)) {
+        /* keep boot-time SkyView logo on the screen for 7 seconds */
+        delay(7000);
+      }
     } else {
       if (hw_info.display == DISPLAY_EPD_2_7) {
         /* keep boot-time SkyView logo on the screen for 7 seconds */
@@ -895,6 +893,7 @@ const SoC_ops_t ESP32_ops = {
   ESP32_Battery_voltage,
   ESP32_EPD_setup,
   ESP32_WiFi_Receive_UDP,
+  ESP32_WiFi_clients_count,
   ESP32_DB_init,
   ESP32_DB_query,
   ESP32_DB_fini,
