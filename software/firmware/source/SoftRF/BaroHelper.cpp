@@ -33,12 +33,13 @@ Adafruit_MPL3115A2 mpl3115a2 = Adafruit_MPL3115A2();
 static unsigned long BaroTimeMarker = 0;
 static float prev_pressure_altitude = 0;
 
-#define VS_AVERAGING_FACTOR   4
+#define VS_AVERAGING_FACTOR   60
 static float Baro_VS[VS_AVERAGING_FACTOR];
 static int avg_ndx = 0;
 
-/* 4 baro sensor readings per second */
-#define isTimeToBaro() ((millis() - BaroTimeMarker) > (1000 / VS_AVERAGING_FACTOR))
+/* 1 baro sensor reading per second */
+#define BARO_READINGS_PER_SECOND  1
+#define isTimeToBaro() ((millis() - BaroTimeMarker) > (1000 / BARO_READINGS_PER_SECOND))
 
 static bool bmp180_probe()
 {
@@ -217,10 +218,14 @@ byte Baro_setup()
 
 void Baro_loop()
 {
-  if (baro_chip && isTimeToBaro()) {
+  if (isTimeToBaro()) {
 
     /* Draft of pressure altitude and vertical speed calculation */
-    ThisAircraft.pressure_altitude = baro_chip->altitude(1013.25);
+    if (baro_chip) {
+      ThisAircraft.pressure_altitude = baro_chip->altitude(1013.25);
+    } else { // use GNSS altitude if baro is not available
+      ThisAircraft.pressure_altitude = ThisAircraft.altitude;
+    }
 
     Baro_VS[avg_ndx] = (ThisAircraft.pressure_altitude - prev_pressure_altitude) /
       (millis() - BaroTimeMarker) * 1000;  /* in m/s */
