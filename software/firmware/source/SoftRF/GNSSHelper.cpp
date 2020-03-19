@@ -706,8 +706,10 @@ void PickGNSSFix()
           }
           else
 #endif
-          {
-            NMEA_Out(&GNSSbuf[ndx], write_size, true);
+          { // dump all GNSS sentences out to UART can be too much, avoid GSA and GSV
+            if (!((GNSSbuf[ndx+3] == 'G') && (GNSSbuf[ndx+4] == 'S'))) {
+              NMEA_Out(&GNSSbuf[ndx], write_size, true);
+            }
           }
 
           break;
