@@ -313,6 +313,8 @@ bool RF_Transmit(size_t size, bool wait)
         StdOut.print(F(","));
         StdOut.println(Bin2Hex((byte *) &TxBuffer[0],
                                RF_Payload_Size(settings->rf_protocol)));
+      } else {
+        StdOut.print("TX\n");
       }
       tx_packets_counter++;
       RF_tx_size = 0;
