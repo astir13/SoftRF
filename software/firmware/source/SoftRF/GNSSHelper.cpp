@@ -287,11 +287,12 @@ static void setup_UBX()
 
 static void setup_NMEA()
 {
-  //swSer.write("$PUBX,41,1,0007,0003,9600,0*10\r\n");
-  //swSer.write("$PUBX,41,1,0007,0003,38400,0*20\r\n");
+#if 0
+  swSer.write("$PUBX,41,1,0007,0003,9600,0*10\r\n");
+  swSer.write("$PUBX,41,1,0007,0003,38400,0*20\r\n");
 
-  //swSer.flush();
-  //SoC->swSer_begin(38400);
+  swSer.flush();
+  SoC->swSer_begin(38400);
 
   // Turning off some GPS NMEA strings on the uBlox modules
   swSer.write("$PUBX,40,GLL,0,0,0,0*5C\r\n"); delay(250);
@@ -299,6 +300,7 @@ static void setup_NMEA()
   swSer.write("$PUBX,40,VTG,0,0,0,0*5E\r\n"); delay(250);
 #if !defined(NMEA_TCP_SERVICE)
   swSer.write("$PUBX,40,GSA,0,0,0,0*4E\r\n"); delay(250);
+#endif
 #endif
 
 #if defined(USE_AT6558_SETUP)

@@ -31,9 +31,10 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.1e"
+#define SOFTRF_FIRMWARE_VERSION "1.1h"
 #define SOFTRF_IDENT            "SoftRF-"
 #define SOFTRF_ADDRESS 0x458C58
+//#define DO_GNSS_DEBUG
 
 #define ENTRY_EXPIRATION_TIME   10 /* seconds */
 #define LED_EXPIRATION_TIME     5 /* seconds */
