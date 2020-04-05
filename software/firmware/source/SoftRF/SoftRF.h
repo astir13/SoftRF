@@ -31,7 +31,7 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.1f"
+#define SOFTRF_FIRMWARE_VERSION "1.1e"
 #define SOFTRF_IDENT            "SoftRF-"
 #define SOFTRF_ADDRESS 0x458C58
 
