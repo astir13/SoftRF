@@ -140,7 +140,7 @@ void NMEA_loop()
     snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAE,A,0,0*")); /* FLARM no problem detected */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
-    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,HWVER,Prime_MKii*")); /* FLARM HW VER */
+    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,HWVER,Prime2*")); /* FLARM HW VER */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
     snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,SWVER,6.82*")); /* FLARM SW VER */
