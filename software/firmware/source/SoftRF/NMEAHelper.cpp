@@ -383,6 +383,8 @@ void NMEA_Export()
     if (settings->nmea_l) {
 
       if (total_objects > 0) {
+        HP_bearing = HP_bearing - ThisAircraft.course;  // relative bearing to our own needed for ext. display (i.e. FLARM display)
+        HP_bearing > 0 ? HP_bearing : HP_bearing + 360;
         snprintf_P(NMEABuffer, sizeof(NMEABuffer),
                 PSTR("$PFLAU,%d,%d,%d,%d,%d,%d,%d,%d,%u,%06X" PFLAU_EXT1_FMT "*"),
                 total_objects,
