@@ -31,10 +31,10 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.1h"
-#define SOFTRF_IDENT            "SoftRF-"
+#define SOFTRF_FIRMWARE_VERSION "1.2a"
+#define SOFTRF_IDENT            "SoftRFs-"
 //#define SOFTRF_ADDRESS 0x458C58
-#define SOFTRF_ADDRESS 0xFF50F0
+//#define SOFTRF_ADDRESS 0xFF50F0
 //#define DO_GNSS_DEBUG
 
 #define ENTRY_EXPIRATION_TIME   10 /* seconds */
@@ -55,9 +55,8 @@
  * #define MY_ACCESSPOINT_SSID "AndroidAP"
  * #define MY_ACCESSPOINT_PSK  "12345678"
  */
-
-#define MY_ACCESSPOINT_SSID "mahewakan71"
-#define MY_ACCESSPOINT_PSK  "EinHaseSprangUbersHaus"
+#define MY_ACCESSPOINT_SSID ""
+#define MY_ACCESSPOINT_PSK ""
 
 // Default mode is AP with
 // SSID: SoftRF-XXXXXX
