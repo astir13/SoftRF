@@ -126,7 +126,7 @@ void Traffic_Update(int ndx)
                                                   Container[ndx].latitude,
                                                   Container[ndx].longitude);
 
-  Container[ndx].bearing = gnss.courseTo( ThisAircraft.latitude,
+  Container[ndx].bearing = gnss.courseTo( ThisAircraft.latitude, // returns course in degrees (North=0, West=270) from position 1 to position 2
                                           ThisAircraft.longitude,
                                           Container[ndx].latitude,
                                           Container[ndx].longitude);
