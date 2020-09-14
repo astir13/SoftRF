@@ -146,10 +146,10 @@ void NMEA_loop()
     snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,SWVER,6.82*")); /* FLARM SW VER */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
-    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,SER,01211*")); /* FLARM SW VER */
+    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,SER,01211*")); /* FLARM SERIAL NR. */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
-    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,ID,458C58*")); /* FLARM ID */
+    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAC,A,ID,123456*")); /* FLARM ID */
     NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
     NMEA_Out((byte *) NMEABuffer, strlen(NMEABuffer), false);
     PFLAV_TimeMarker = millis();
@@ -227,6 +227,18 @@ void NMEA_Out(byte *buf, size_t size, bool nl)
       SerialOutput.write(buf, size);
       if (nl)
         SerialOutput.write('\n');
+    }
+    break;
+  case NMEA_UART_BT:
+    {
+      SerialOutput.write(buf, size);
+      if (nl)
+        SerialOutput.write('\n');
+    }
+    if (SoC->Bluetooth) {
+      SoC->Bluetooth->write(buf, size);
+      if (nl)
+        SoC->Bluetooth->write((byte *) "\n", 1);
     }
     break;
   case NMEA_UDP:

@@ -108,6 +108,7 @@ const char *OLED_Protocol_ID[] = {
 };
 
 const char SoftRF_text[]   = "SoftRF";
+const char SoftRF_version[]= SOFTRF_FIRMWARE_VERSION;
 const char ID_text[]       = "ID";
 const char PROTOCOL_text[] = "PROTOCOL";
 const char RX_text[]       = "RX";
@@ -699,7 +700,8 @@ static byte ESP32_Display_setup()
       u8x8->begin();
       u8x8->setFont(u8x8_font_chroma48medium8_r);
       u8x8->clear();
-      u8x8->draw2x2String(2, 3, SoftRF_text);
+      u8x8->draw2x2String(1, 2, SoftRF_text);
+      u8x8->draw2x2String(1, 5, SoftRF_version);
     }
 
   } else {  /* ESP32_TTGO_T_WATCH */

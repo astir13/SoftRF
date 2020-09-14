@@ -119,7 +119,7 @@ Copyright (C) 2015-2020 &nbsp;&nbsp;&nbsp; Linar Yusupov\
 
 void handleSettings() {
 
-  size_t size = 4700;
+  size_t size = 5700;
   char *offset;
   size_t len = 0;
   char *Settings_temp = (char *) malloc(size);
@@ -398,8 +398,10 @@ void handleSettings() {
     snprintf_P ( offset, size,
       PSTR("\
 <option %s value='%d'>TCP</option>\
+<option %s value='%d'>Serial and Bluetooth</option>\
 <option %s value='%d'>Bluetooth</option>"),
     (settings->nmea_out == NMEA_TCP ? "selected" : ""), NMEA_TCP,
+    (settings->nmea_out == NMEA_UART_BT ? "selected" : ""), NMEA_UART_BT,
     (settings->nmea_out == NMEA_BLUETOOTH ? "selected" : ""), NMEA_BLUETOOTH);
 
     len = strlen(offset);
