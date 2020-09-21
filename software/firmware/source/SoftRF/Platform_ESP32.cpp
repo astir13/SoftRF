@@ -88,6 +88,9 @@ volatile bool PMU_Irq = false;
 
 static bool GPIO_21_22_are_busy = false;
 
+static bool off_switch = false;
+static uint8_t off_switch_cnt = 0;
+
 static union {
   uint8_t efuse_mac[6];
   uint64_t chipmacid;
@@ -225,6 +228,7 @@ static void ESP32_setup()
     Wire1.beginTransmission(AXP192_SLAVE_ADDRESS);
     if (Wire1.endTransmission() == 0) {
       hw_info.revision = 8;
+      pinMode(SOC_GPIO_PIN_TBEAM_PWR_SWITCH, INPUT_PULLUP);  // used for optional power switch, low->OFF
 
       axp.begin(Wire1, AXP192_SLAVE_ADDRESS);
 
@@ -291,10 +295,15 @@ static void ESP32_loop()
       portENTER_CRITICAL_ISR(&PMU_mutex);
       PMU_Irq = false;
       portEXIT_CRITICAL_ISR(&PMU_mutex);
+    }
 
-      if (down) {
+    if (digitalRead(SOC_GPIO_PIN_TBEAM_PWR_SWITCH) == LOW) {
+      off_switch_cnt ++;
+      off_switch = off_switch > 5;
+    }
+
+    if (off_switch || down) {
         shutdown("  OFF  ");
-      }
     }
 
     if (isTimeToBattery()) {
@@ -888,7 +897,7 @@ static void ESP32_Display_loop()
         u8x8->drawString(0, 6, BAT_text);
         strcpy(buf, "--.-");
         u8x8->drawString(5, 6, buf);
-        u8x8->drawString(13, 6, V_text);
+        u8x8->drawString(9, 6, V_text);
 
         OLED_display_frontpage = true;
 
@@ -897,6 +906,9 @@ static void ESP32_Display_loop()
         if (axp.isBatteryConnect()) {
           itoa(axp.getBattVoltage(), buf, 10);
           u8x8->drawString(5, 6, buf);
+
+          itoa(off_switch_cnt, buf, 10);
+          u8x8->drawString(13,6, buf);
         }
 
         if (rx_packets_counter > prev_rx_packets_counter) {
