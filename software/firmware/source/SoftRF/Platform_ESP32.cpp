@@ -90,6 +90,7 @@ static bool GPIO_21_22_are_busy = false;
 
 static bool off_switch = false;
 static uint8_t off_switch_cnt = 0;
+static unsigned long offSwitch_TimeMarker = 0;
 
 static union {
   uint8_t efuse_mac[6];
@@ -297,9 +298,14 @@ static void ESP32_loop()
       portEXIT_CRITICAL_ISR(&PMU_mutex);
     }
 
-    if (digitalRead(SOC_GPIO_PIN_TBEAM_PWR_SWITCH) == LOW) {
-      off_switch_cnt ++;
-      off_switch = off_switch > 5;
+    if (isTimeToOffSwitch()) {
+      if (digitalRead(SOC_GPIO_PIN_TBEAM_PWR_SWITCH) == LOW) {
+        off_switch_cnt ++;
+        off_switch = off_switch_cnt > 4; // start shutdown after 5 seconds
+        offSwitch_TimeMarker = millis();
+      } else {
+        off_switch_cnt = 0;
+      }
     }
 
     if (off_switch || down) {

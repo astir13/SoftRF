@@ -131,6 +131,7 @@ extern Adafruit_NeoPixel strip;
 #define SOC_GPIO_PIN_TBEAM_V05_BUTTON   39
 #define SOC_GPIO_PIN_TBEAM_V08_BUTTON   38
 #define SOC_GPIO_PIN_TBEAM_PWR_SWITCH   15
+#define isTimeToOffSwitch()             (millis() - offSwitch_TimeMarker > 1000)
 // PMU
 #define SOC_GPIO_PIN_TBEAM_V08_PMU_IRQ  35
 // SX1276 RESET
