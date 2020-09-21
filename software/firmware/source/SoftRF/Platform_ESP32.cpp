@@ -700,8 +700,8 @@ static byte ESP32_Display_setup()
       u8x8->begin();
       u8x8->setFont(u8x8_font_chroma48medium8_r);
       u8x8->clear();
-      u8x8->draw2x2String(1, 2, SoftRF_text);
-      u8x8->draw2x2String(1, 5, SoftRF_version);
+      u8x8->draw2x2String(1, 1, SoftRF_text);
+      u8x8->draw2x2String(1, 3, SoftRF_version);
     }
 
   } else {  /* ESP32_TTGO_T_WATCH */
@@ -860,35 +860,35 @@ static void ESP32_Display_loop()
 
         u8x8->clear();
 
-        u8x8->drawString(1, 1, ID_text);
+        u8x8->drawString(0, 1, ID_text);
 
         itoa(ThisAircraft.addr & 0xFFFFFF, buf, 16);
-        u8x8->draw2x2String(0, 2, buf);
+        u8x8->drawString(0, 2, buf);
 
         u8x8->drawString(8, 1, PROTOCOL_text);
 
-        u8x8->draw2x2String(14, 2, OLED_Protocol_ID[ThisAircraft.protocol]);
+        u8x8->drawString(8, 2, OLED_Protocol_ID[ThisAircraft.protocol]);
 
-        u8x8->drawString(1, 5, RX_text);
+        u8x8->drawString(0, 4, RX_text);
 
-        itoa(rx_packets_counter % 1000, buf, 10);
-        u8x8->draw2x2String(0, 6, buf);
+        itoa(rx_packets_counter % 10000, buf, 10);
+        u8x8->drawString(3, 4, buf);
 
-        u8x8->drawString(9, 5, TX_text);
+        u8x8->drawString(8, 4, TX_text);
 
         if (settings->txpower == RF_TX_POWER_OFF ) {
           strcpy(buf, "OFF");
         } else {
-          itoa(tx_packets_counter % 1000, buf, 10);
+          itoa(tx_packets_counter % 100000, buf, 10);
         }
-        u8x8->draw2x2String(8, 6, buf);
+        u8x8->drawString(11, 4, buf);
 
         OLED_display_frontpage = true;
 
       } else {  /* OLED_display_frontpage */
 
         if (rx_packets_counter > prev_rx_packets_counter) {
-          disp_value = rx_packets_counter % 1000;
+          disp_value = rx_packets_counter % 10000;
           itoa(disp_value, buf, 10);
 
           if (disp_value < 10) {
@@ -899,11 +899,11 @@ static void ESP32_Display_loop()
             };
           }
 
-          u8x8->draw2x2String(0, 6, buf);
+          u8x8->drawString(3, 4, buf);
           prev_rx_packets_counter = rx_packets_counter;
         }
         if (tx_packets_counter > prev_tx_packets_counter) {
-          disp_value = tx_packets_counter % 1000;
+          disp_value = tx_packets_counter % 100000;
           itoa(disp_value, buf, 10);
 
           if (disp_value < 10) {
@@ -914,7 +914,7 @@ static void ESP32_Display_loop()
             };
           }
 
-          u8x8->draw2x2String(8, 6, buf);
+          u8x8->drawString(11, 4, buf);
           prev_tx_packets_counter = tx_packets_counter;
         }
       }
