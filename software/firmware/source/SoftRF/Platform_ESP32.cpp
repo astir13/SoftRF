@@ -113,6 +113,8 @@ const char ID_text[]       = "ID";
 const char PROTOCOL_text[] = "PROTOCOL";
 const char RX_text[]       = "RX";
 const char TX_text[]       = "TX";
+const char BAT_text[]      = "BAT";
+const char V_text[]        = "mV";
 
 static void IRAM_ATTR ESP32_PMU_Interrupt_handler() {
   portENTER_CRITICAL_ISR(&PMU_mutex);
@@ -883,9 +885,19 @@ static void ESP32_Display_loop()
         }
         u8x8->drawString(11, 4, buf);
 
+        u8x8->drawString(0, 6, BAT_text);
+        strcpy(buf, "--.-");
+        u8x8->drawString(5, 6, buf);
+        u8x8->drawString(13, 6, V_text);
+
         OLED_display_frontpage = true;
 
       } else {  /* OLED_display_frontpage */
+
+        if (axp.isBatteryConnect()) {
+          itoa(axp.getBattVoltage(), buf, 10);
+          u8x8->drawString(5, 6, buf);
+        }
 
         if (rx_packets_counter > prev_rx_packets_counter) {
           disp_value = rx_packets_counter % 10000;
