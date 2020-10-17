@@ -353,6 +353,7 @@ static void ESP32_fini()
     axp.setPowerOutPut(AXP192_DCDC2, AXP202_OFF);
     axp.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);
     axp.setPowerOutPut(AXP192_EXTEN, AXP202_OFF);
+    axp.shutdown();
 
     delay(20);
 
