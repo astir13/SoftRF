@@ -1014,6 +1014,7 @@ static void ESP32_Battery_setup()
   } else {
     calibrate_voltage(hw_info.model == SOFTRF_MODEL_PRIME_MK2 ?
                       ADC1_GPIO35_CHANNEL : ADC1_GPIO36_CHANNEL);
+    axp.setChargingTargetVoltage(AXP202_TARGET_VOL_4_1V);  // safe LiPo/LiIon lifetime
   }
 }
 
