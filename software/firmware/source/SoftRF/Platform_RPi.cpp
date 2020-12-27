@@ -363,6 +363,7 @@ const SoC_ops_t RPi_ops = {
   NULL,
   NULL,
   NULL,
+  NULL,
   RPi_get_PPS_TimeMarker,
   NULL,
   RPi_UATSerial_begin,

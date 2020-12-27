@@ -360,6 +360,7 @@ const SoC_ops_t ESP8266_ops = {
   ESP8266_Display_setup,
   ESP8266_Display_loop,
   ESP8266_Display_fini,
+  NULL,
   ESP8266_Battery_setup,
   ESP8266_Battery_voltage,
   ESP8266_GNSS_PPS_Interrupt_handler,

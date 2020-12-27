@@ -56,6 +56,7 @@ typedef struct SoC_ops_struct {
   byte (*Display_setup)();
   void (*Display_loop)();
   void (*Display_fini)(const char *);
+  bool (*onExternalPower)();
   void (*Battery_setup)();
   float (*Battery_voltage)();
   void (*GNSS_PPS_handler)();

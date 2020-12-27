@@ -90,6 +90,7 @@
 
 #define isTimeToDisplay() (millis() - LEDTimeMarker > 1000)
 #define isTimeToExport() (millis() - ExportTimeMarker > 1000)
+#define isTimeToShutdownBatNoMove() (millis() - ShutdownBatNoMove_timeMarker > 60000)
 
 ufo_t ThisAircraft;
 hardware_info_t hw_info = {
@@ -102,8 +103,10 @@ hardware_info_t hw_info = {
   .display  = DISPLAY_NONE
 };
 
-unsigned long LEDTimeMarker = 0;
-unsigned long ExportTimeMarker = 0;
+static unsigned long LEDTimeMarker = 0;
+static unsigned long ExportTimeMarker = 0;
+static unsigned long ShutdownBatNoMoveCnt = 0;
+static unsigned long ShutdownBatNoMove_timeMarker = 0;
 
 void setup()
 {
@@ -262,7 +265,23 @@ void loop()
 
   SoC->loop();
 
+  // shut down if battery voltage is too low
   Battery_loop();
+
+#if defined (SOFTRF_SHUTDOWN_BAT_NO_MOVE)
+  // shut down after 10 minutes if no external voltage and speed < 10kt
+  if (isTimeToShutdownBatNoMove()) {
+    if (! SoC->onExternalPower() && ThisAircraft.speed < 10) {
+      ShutdownBatNoMoveCnt++;
+    } else {
+      ShutdownBatNoMoveCnt = 0;
+    }
+    if (ShutdownBatNoMoveCnt > 10) {
+      shutdown("Pwr Save.");
+    }
+    ShutdownBatNoMove_timeMarker = millis();
+  }
+#endif /* SOFTRF_SHUTDOWN_BAT_NO_MOVE */
 
   yield();
 }

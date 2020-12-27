@@ -31,11 +31,17 @@
 #include <raspi/raspi.h>
 #endif /* RASPBERRY_PI */
 
-#define SOFTRF_FIRMWARE_VERSION "1.3c"
-#define SOFTRF_IDENT            "SoftRFs-"
+#define SOFTRF_FIRMWARE_VERSION "1.3d"
+#define SOFTRF_IDENT            "SoftRFs-"  // s for standalone fork
 //#define SOFTRF_ADDRESS 0x458C58
 //#define SOFTRF_ADDRESS 0xFF50F0
 //#define DO_GNSS_DEBUG
+
+/* For systems where external power shall be connected under normal conditions
+   (aeroplanes and sailplanes)
+   shut down after timeout if no movement and no external voltage
+   handling the case of forgotten to switch off the SoftRF but removed battery from plane */
+#define SOFTRF_SHUTDOWN_BAT_NO_MOVE
 
 #define ENTRY_EXPIRATION_TIME   10 /* seconds */
 #define LED_EXPIRATION_TIME     5 /* seconds */

@@ -993,6 +993,15 @@ static float ESP32_Battery_voltage()
   return (voltage * 0.001);
 }
 
+/* external Power is available from USB port (VBUS0) */
+static bool ESP32_onExternalPower() {
+  if (axp.isVBUSPlug()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 static void ESP32_Battery_setup()
 {
   if ((hw_info.model    == SOFTRF_MODEL_PRIME_MK2 &&
@@ -1127,6 +1136,7 @@ const SoC_ops_t ESP32_ops = {
   ESP32_Display_setup,
   ESP32_Display_loop,
   ESP32_Display_fini,
+  ESP32_onExternalPower,
   ESP32_Battery_setup,
   ESP32_Battery_voltage,
   ESP32_GNSS_PPS_Interrupt_handler,

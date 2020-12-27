@@ -182,6 +182,7 @@ const SoC_ops_t CC13XX_ops = {
   NULL,
   NULL,
   NULL,
+  NULL,
   CC13XX_Battery_setup,
   CC13XX_Battery_voltage,
   CC13XX_GNSS_PPS_Interrupt_handler,
