@@ -71,13 +71,14 @@ static const char about_html[] PROGMEM = "<html>\
   </head>\
 <body>\
 <h1 align=center>About</h1>\
-<p>This firmware is a part of open SoftRF project</p>\
-<p>URL: http://github.com/lyusupov/SoftRF</p>\
-<p>Author: <b>Linar Yusupov</b></p>\
-<p>E-mail: linar.r.yusupov@gmail.com</p>\
+<p>This firmware is a fork of open SoftRF project, adapted to my personal preferences</p>\
+<p>URL: http://github.com/astir13/SoftRF_standalone</p>\
+<p>Author: <b>Stefan Pielmeier</b></p>\
+<p>E-mail: stefan@symlinux.com</p>\
 <h2 align=center>Credits</h2>\
 <p align=center>(in historical order)</p>\
 <table width=100%%>\
+<tr><th align=left>Linar Yusupov</th><td align=left>Project lyusupov/SoftRF (open SoftRF)</td></tr>\
 <tr><th align=left>Ivan Grokhotkov</th><td align=left>Arduino core for ESP8266</td></tr>\
 <tr><th align=left>Zak Kemble</th><td align=left>nRF905 library</td></tr>\
 <tr><th align=left>Stanislaw Pusep</th><td align=left>flarm_decode</td></tr>\
@@ -113,7 +114,7 @@ static const char about_html[] PROGMEM = "<html>\
 <tr><th align=left>Bodmer</th><td align=left>TFT library</td></tr>\
 </table>\
 <hr>\
-Copyright (C) 2015-2020 &nbsp;&nbsp;&nbsp; Linar Yusupov\
+Copyright (C) 2018-2020 &nbsp;&nbsp;&nbsp; Stefan Pielmeier\
 </body>\
 </html>";
 
@@ -547,7 +548,7 @@ void handleRoot() {
   dtostrf(ThisAircraft.altitude, 7, 1, str_alt);
   dtostrf(vdd, 4, 2, str_Vcc);
 
-  snprintf_P ( Root_temp, 2300,
+  snprintf_P ( Root_temp, 2500,
     PSTR("<html>\
   <head>\
     <meta name='viewport' content='width=device-width, initial-scale=1'>\
@@ -561,7 +562,7 @@ void handleRoot() {
  </table>\
  <table width=100%%>\
   <tr><th align=left>Device Id</th><td align=right>%X</td></tr>\
-  <tr><th align=left>Software Version</th><td align=right>%s&nbsp;&nbsp;%s</td></tr>"
+  <tr><th align=left>Software Version (astir13/SoftRF_standalone)</th><td align=right>%s&nbsp;&nbsp;%s</td></tr>"
 #if !defined(ENABLE_AHRS)
  "</table><table width=100%%>\
   <tr><td align=left><table><tr><th align=left>GNSS&nbsp;&nbsp;</th><td align=right>%s</td></tr></table></td>\
@@ -777,6 +778,7 @@ void Web_setup()
   <head>\
     <meta name='viewport' content='width=device-width, initial-scale=1'>\
     <title>Firmware update</title>\
+    <p>ESP32: select SoftRF.ino.esp32.bin from software/firmware/source/SoftRF folder</p>\
   </head>\
 <body>\
 <body>\
