@@ -676,6 +676,7 @@ const SoC_ops_t STM32_ops = {
   STM32_Display_setup,
   STM32_Display_loop,
   STM32_Display_fini,
+  NULL,
   STM32_Battery_setup,
   STM32_Battery_voltage,
   STM32_GNSS_PPS_Interrupt_handler,
