@@ -256,6 +256,7 @@ void handleSettings() {
 <td align=right>\
 <select name='txpower'>\
 <option %s value='%d'>Full</option>\
+<option %s value='%d'>EU</option>\
 <option %s value='%d'>Low</option>\
 <option %s value='%d'>Off</option>\
 </select>\
@@ -303,6 +304,7 @@ void handleSettings() {
   (settings->alarm == TRAFFIC_ALARM_DISTANCE ? "selected" : ""),  TRAFFIC_ALARM_DISTANCE,
   (settings->alarm == TRAFFIC_ALARM_VECTOR ? "selected" : ""),  TRAFFIC_ALARM_VECTOR,
   (settings->txpower == RF_TX_POWER_FULL ? "selected" : ""),  RF_TX_POWER_FULL,
+  (settings->txpower == RF_TX_POWER_EU ? "selected" : ""),  RF_TX_POWER_EU,
   (settings->txpower == RF_TX_POWER_LOW ? "selected" : ""),  RF_TX_POWER_LOW,
   (settings->txpower == RF_TX_POWER_OFF ? "selected" : ""),  RF_TX_POWER_OFF,
   (settings->volume == BUZZER_VOLUME_FULL ? "selected" : ""), BUZZER_VOLUME_FULL,

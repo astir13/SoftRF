@@ -454,12 +454,11 @@ void nrf905_setup()
   switch(settings->txpower)
   {
   case RF_TX_POWER_FULL:
-
+  case RF_TX_POWER_EU:
     /*
      * NRF905 is unable to give more than 10 dBm
      * 10 dBm is legal everywhere in the world
      */
-
     nRF905_setTransmitPower((nRF905_pwr_t)NRF905_PWR_10);
     break;
   case RF_TX_POWER_OFF:
@@ -679,6 +678,9 @@ void sx1276_setup()
     if (LMIC.txpow > 17)
       LMIC.txpow = 17;
 #endif
+    break;
+  case RF_TX_POWER_EU:
+    LMIC.txpow = 11; // measured to be ~13.1dBm, max. 14 dBm eirp. required acc. to ERC Rec. 70-03, max. 25mW e.r.p in 868-868.6 MHz
     break;
   case RF_TX_POWER_OFF:
   case RF_TX_POWER_LOW:
@@ -1330,7 +1332,8 @@ void ognrf_setup()
     if (TxPower > 17)
       TxPower = 17;
 #endif
-
+  case RF_TX_POWER_EU:
+    TxPower = 14; // acc. to ERC Rec. 70-03, max. 25mW e.r.p in 868-868.6 MHz
 #ifdef WITH_RFM69
     TRX.WriteTxPower(TxPower, RFM69_POWER_RATING == 1 ? true : false);
 #else

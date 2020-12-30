@@ -482,6 +482,8 @@ void s7xg_setup()
 #endif
     break;
   case RF_TX_POWER_OFF:
+  case RF_TX_POWER_EU:
+    LMIC.txpow = 14; // acc. to ERC Rec. 70-03, max. 25mW e.r.p in 868-868.6 MHz
   case RF_TX_POWER_LOW:
   default:
     LMIC.txpow = 2; /* 2 dBm is minimum for RFM95W on PA_BOOST pin */

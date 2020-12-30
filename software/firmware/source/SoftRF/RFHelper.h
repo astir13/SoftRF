@@ -62,6 +62,7 @@ enum
 enum
 {
   RF_TX_POWER_FULL,
+  RF_TX_POWER_EU,
   RF_TX_POWER_LOW,
   RF_TX_POWER_OFF
 };

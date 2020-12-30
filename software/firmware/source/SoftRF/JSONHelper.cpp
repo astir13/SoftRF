@@ -427,6 +427,8 @@ void parseSettings(JsonObject& root)
     const char * txpower_s = txpower.as<char*>();
     if (!strcmp(txpower_s,"FULL")) {
       eeprom_block.field.settings.txpower = RF_TX_POWER_FULL;
+    } else if (!strcmp(txpower_s,"EU")) {
+      eeprom_block.field.settings.txpower = RF_TX_POWER_EU;
     } else if (!strcmp(txpower_s,"LOW")) {
       eeprom_block.field.settings.txpower = RF_TX_POWER_LOW;
     } else if (!strcmp(txpower_s,"OFF")) {
