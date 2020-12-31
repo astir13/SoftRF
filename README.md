@@ -12,7 +12,7 @@ Multifunctional DIY IoT-based general aviation proximity awareness system, forke
 * [User Manual](https://github.com/astir13/SoftRF/tree/master/documents/usermanual/binaries)
 * Software
     * Firmware
-        * [Binary Releases](https://github.com/astir13/SoftRF/wiki/releases)
+        * [Binary Releases](https://github.com/astir13/SoftRF/wiki/Updates)
         * [Source](https://github.com/astir13/SoftRF/tree/master/software/firmware/source)
 * Hardware
 You need:
