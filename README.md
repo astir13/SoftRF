@@ -19,7 +19,7 @@ You need:
     * 1x TT-GO T-Beam v1.1 board with OLED display, like https://www.aliexpress.com/item/33050391850.html?spm=a2g0s.9042311.0.0.27424c4dU9WiWD
     * 1x RS-232/UART converter, like https://www.aliexpress.com/item/4000189810712.html?spm=a2g0s.9042311.0.0.27424c4dQ6D88f
     * 1x DC-DC 12V to 5V/3A converter as power supply, like https://www.aliexpress.com/item/32826540392.html?spm=a2g0s.9042311.0.0.27424c4dbbq0Ht
-    * a chassis, found here:
+    * a chassis, 3D printed: https://www.thingiverse.com/thing:4704154/
     * some hot-glue
     * some wires
     * a protected Li-Ion battery, size 18650, 2600mAh or better, with integrated battery management system to give added security
