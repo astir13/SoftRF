@@ -1,4 +1,4 @@
-\documentclass[10pt,a4paper]{article}
+\documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{graphicx}  % include graphics
@@ -7,6 +7,7 @@
 \usepackage{color}     % for colors
 \usepackage{multirow}  % multiple rows in tables
 % \usepackage{latexsym}  % for \Box
+\usepackage{vhistory}		% supplies us with versionhistory\usepackage[hidelinks]{hyperref}   % references in pdf file
 \usepackage[section]{placeins} % keep floats where they are inserted
 \usepackage{fancyhdr} % the custom header
 \setlength{\headheight}{12mm}
@@ -15,7 +16,7 @@
 \usepackage[left=2.9cm,right=2.9cm,top=2.5cm,bottom=1.5cm]{geometry} % the page margins
 
 \title{\Huge User Manual\\[5mm]\Large SoftRF (Github astir13/SoftRF fork)\\[5mm]matching SoftRF firmware version 1.3e}
-\date{2020-12-30\\[10mm]Thanks to all contributrs of the Github SoftRF Project.}
+\date{2020-12-31\\[10mm]Thanks to all contributrs of the Github SoftRF Project.\\[3cm]\includegraphics[scale=.4]{softrf.jpg}}
 \begin{document}
 % some defines
 \definecolor{lightpink}{RGB}{229,172,197}
@@ -51,10 +52,16 @@
 %	\put(\secondcolumnstart,\the\numexpr\graphheight - 10){\line(0,1){10}}
 %\end{picture}}
 \lhead{astir13/SoftRF}
-\chead{User Manual v.\/1.3e rev.\/0}
+\chead{User Manual v.\/1.3e rev.\/1}
 \rhead{pg. \thepage 		(\pageref{LastPage})}
 \renewcommand{\headwidth}{17cm}
 %\renewcommand{\headrulewidth}{0pt}
+
+\section{Revision History}
+\begin{versionhistory}
+  \vhEntry{1.3e rev. 0}{2020-12-30}{astir13}{created from scratch}
+  \vhEntry{1.3e rev. 1}{2020-12-31}{astir13}{editorials, added Display section, added Revision History, corrected links to fork}
+\end{versionhistory}
 
 \section{Acronyms}
 \begin{description}
@@ -86,7 +93,7 @@ Therefore, you should never trust such installations, nor the fact that you can 
 
 The above statements are not true for certified Mode-S transponders and TCAS equipment. Air transponders operate on reserved frequencies, may only be operated when certified and properly tested, with about 1000 times higher transmit power, and are proved to work efficiently and effectively for sailplanes, small aeroplanes and commercial planes of all sizes. In the eyes of the author, certified transponder based communication is the future of air anti-collision for all segments, but in some countries you may not be allowed such equipment in small areoplanes, drones, ultralights, and so on. So the ISM band based air traffic awareness equipment might have a long future ahead.
 
-A note on the protocol: While Flarm is the most used protocol, it is advised to consider using the other protocols like OGN-T because they are open source. Flarm will, thanks to the Open Glider Net initiative, not change protocol anymore, because most pilots highly rely on the existence of the open glider network to track their planes safely throughout each journey. If Flarm would change the protocol one day, remember that you can change your SoftRF to use e.g. OGN-T through the settings menu very easily, and all open glider Net trackers would be able to "see" your plane in real time again.
+A note on the protocol: While Flarm is the most used protocol, it is advised to consider using the other protocols like OGN-TP because they are open source. Flarm will, thanks to the Open Glider Net initiative, not change protocol anymore, because most pilots highly rely on the existence of the open glider network to track their planes safely throughout each journey. If Flarm would change the protocol one day, remember that you can change your SoftRF to use e.g. OGN-TP through the settings menu very easily, and all open glider Net trackers would be able to "see" your plane in real time again.
 
 \section{Basics about SoftRF}
 The SoftRF main purpose is to transmit anti-collision data to other devices. In order to do so, it finds information about the own aircraft and packages it into a protocol, which then is transmitted through the SoftRF antenna on UHF ISM band frequencies.
@@ -123,7 +130,7 @@ From the point in time when the SoftRF has successful reception from GNSS, it is
 \section{Installation}
 The SoftRF has to be built into a stable case, secured against overheating, examples can be seen at https://github.com/lyusupov/SoftRF/tree/master/case.
 
-For running the astir13 fork of the SoftRF firmware, some hardware additions are required that are described in the Wiki found at https://github.com/astir13/SoftRF\_standalone/wiki.
+For running the astir13 fork of the SoftRF firmware, some hardware additions are required that are described in the Wiki found at https://github.com/astir13/SoftRF/wiki.
 
 \subsection{Mechanical}
 Fasten the SoftRF case and all wirings tightly with other equipment behind the instrument cluster, i.e. using wire straps. As a rule of thumb, an installation shall be able to handle +/-10G, so if your SoftRF weights 200g, the installation shall sustain a 20N force, applied at the SoftRF in each direction.
@@ -233,7 +240,7 @@ To use this interface connect following D-Sub-9 connector pins with your equipme
 \item Pin 8: +3.3V for small (max. 100mA) devices like the Flarm LED
 \end{itemize}
 
-The author does not give any guarantee for correctness, it is the responsibility of the person integrating the equipment to ensure that voltage levels between equipment is compatible. Shortcutting the 3.3V supply might damage the SoftRF.
+The author does not give any guarantee for correctness, it is the responsibility of the person integrating the equipment to ensure that voltage levels between equipment is compatible. Short-cutting the 3.3V supply might damage the SoftRF, exchanging the power line polarity might damage the Flarm LED.
 
 The NMEA out baud rate is 38400 baud, this needs to be adjusted in the connected equipment in order to ensure proper operation.
 
@@ -242,7 +249,8 @@ The SoftRF does not listen to any NMEA input data, you cannot configure or updat
 \subsubsection{Power Switch}
 In order to conveniently integrate the SoftRF in a sailplane installation without the need to physically access the SoftRF itself, a special power switch function is integrated into the SoftRF. 
 
-This power switch shall be of following type Myiama Parts MS500D or similar with following positions:
+The recommended power switch is of type ON-OFF-(ON), a "Myiama Parts MS500D" or similar. It does not switch currents, the actual switching is done by the power control chip inside the SoftRF. The switch has 3 positions and is connected as follows:
+
 \begin{itemize}
 \item Stable middle position: no action; connect to D-Sub-9 Pin 7 (GND)
 \item Stable OFF position: device shall be OFF; connect to D-Sub-9 Pin 3
@@ -279,14 +287,14 @@ When pressing the "Settings" button in the lower left area of the screen, anothe
 All settings can be changed. To provide proper operation for sailplane usage, however, only following settings shall be changed to stay on the safe side:
 
 \begin{itemize}
-\item Protocol: choose "legacy" if you want to see other Flarm devices and if you want to be seen by other Flarm devices; use OGNTP, if you just want to be tracked by the open glider network database, i.e. on http://glidertracker.org. Only use other protocols than "legacy" if you really know what you do and what the consequences are.
+\item Protocol: choose "legacy" if you want to see other Flarm devices and if you want to be seen by other Flarm devices; use OGN-TP, if you just want to be tracked by the open glider network database, i.e. on http://glidertracker.org. Only use other protocols than "legacy" if you really know what you do and what the consequences are.
 \item Region: select the right one, to ensure you use a legal frequency. This might have to be changed when you travel with your glider to e.g. Russian Federation from European Union. However, you can not freely choose all frequencies as your SoftRF is born in a certain frequency band, which limits your choices around that band.
 \item Aircraft Type: choose according to your aircraft type
 \item Alarm Trigger: "Vector" is an intelligent way to create alerts from course over ground and speed to issue alerts if an impact is expected in 19 seconds or sooner; "Distance" creates alerts for the closest received traffic that is closer than 1000m horizontal and 300m vertical, with different levels of urgency, highest urgency level with distance < 400m;
 \item Tx Power: Inside the EU, "EU" should always be used which limits TX power to 25mW (14 dBm) at the Antenna, which is the maximum in the EU; FULL is 17 dBm, and LOW is 2 dBm, these might be chosen at other places;
-\item Built-in Bluetooth: "SPP" shall be chosen if this manual shall apply
+\item Built-in bluetooth: "SPP" shall be chosen if this manual shall apply
 \item NMEA output: "Serial and Bluetooth" ensures you can use a Flarm LED or other cabled device and a bluetooth device to run e.g. XCSoar App at the same time. If you only want one or the other, choose accordingly, but remember that other pilots might expect bluetooth to work.
-\item Power Save: "WIFI Off 10 min." allows you to disable WIFI after 10 minutes from power-up. This can be advicable to ensure noone can temper with your settings when waiting for the towplane, etc. and it safes some power.
+\item Power Save: "WIFI Off 10 min." allows you to disable WIFI after 10 minutes from power-up. This can be advisable to ensure no one can temper with your settings when waiting for the towplane, etc. and it safes some power.
 \item Stealth: "On" informs other aircraft and ground receivers (open glider net), that you are in stealth mode, i.e. used at centralized competitions, where you do not want to share your position and climb rate with other gliders, but you want to have awareness of collision relevant traffic around you, see also http://wiki.glidernet.org/opt-in-opt-out.
 \item No Track: "On" informs the open glider network to hide your position and track (OGN opt-out), including search and rescue, see also http://wiki.glidernet.org/opt-in-opt-out.
 \end{itemize}
@@ -328,7 +336,7 @@ Place the sticker shown in Figure \ref{sticker} in the cockpit for pilots to be 
 		\put(0,\the\numexpr\graphheight){\line(0,-1){\graphheight}}
 		\put(\graphwidth,\the\numexpr\graphheight){\line(0,-1){\graphheight}}
 		\put(1,1){\includegraphics[scale=.4]{pilot-help.png}}
-		\put(30,25){astir13/SoftRF\_standalone}
+		\put(30,25){astir13/SoftRF}
 		\put(30,20){T-Beam Modem HW 1.1}
 		\put(30,15){astir13/SoftRF HW 1.0}
 		\put(30,8){DeviceID}
@@ -424,23 +432,43 @@ Before flying with the SoftRF, check its function when outside on the airfield, 
 \end{itemize}
 
 \subsubsection{In-flight switch OFF}
-To switch OFF your SoftRF in flight, i.e. because you get distracted by too many alerts during aerotow or otherwise, just switch the SoftRF power switch into the "OFF" position and leave it there. The SoftRF will shut down after 5 seconds.
+To switch OFF your SoftRF in flight, i.e. because you get distracted by too many alerts during aero-tow or otherwise, just switch the SoftRF power switch into the "OFF" position and leave it there. The SoftRF will shut down after 5 seconds.
 
 \subsubsection{Switch OFF after flight}
 To switch off your SoftRF at the end of the flight:
 \begin{itemize}
 \item switch off the main power supply of the aircraft,
-\item observe the SoftRF to coninue operation for the next 10 minutes and then to show down itself automatically (this extends the life of the battery because it is not stored fully charged)
+\item observe the SoftRF to continue operation for the next 10 minutes and then to show down itself automatically (this extends the life of the battery because it is not stored fully charged)
 \end{itemize} 
 
 The auto-shutoff function only happens when the GNSS measured speed is below 10kt for at least 10 minutes while external power is off.
 
 \subsection{Power outage}
-If your aircraft's main power supply fails during flight, the SoftRF will continue to operate on power provided by the internal battery. The duration of operation depends highly on the charge in the battery, but should last at least for 60 minutes with an external Flarm LED supplied as well.
+If the aircraft's main power supply fails during flight, the SoftRF will continue to operate on power provided by the internal battery. The duration of operation depends highly on the charge in the battery, but should last at least for 60 minutes with an external Flarm LED supplied as well.
 
 \begin{center}
 \fbox{\parbox{12cm}{Do not use the SoftRF as an indicator for the state of the aircraft's main power supply, as the SoftRF will change over to internal battery power if the external supply fails. The user cannot see any difference during flight.}}
 \end{center}
+
+\subsection{Display}
+The SoftRF contains a little OLED display with status information, mostly for debugging. All information shown is also available through the Status page over WIFI, see \ref{parameters}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[scale=.1]{display.jpg}
+\caption{SoftRF Display}\label{display}
+\end{figure}\FloatBarrier
+
+Figure \ref{display} shows a typical screen view of the SoftRF display with following content:
+
+\begin{itemize}
+\item top left: "ID" and below the Device ID
+\item top right: "PROTOCOL" and below "L" for Legacy (= Flarm v6 compatible)
+\item left middle: "RX" and to the right "0": the number of received packages from other transmitters
+\item middle middle: "TX" and to the rigth "772": the number of transmitted packages, shall increase by 1 each second (roughly), when GNSS reception is working; if not incrementing, the GNSS reception might be bad (aircraft inside hangar, or GNSS antenna blocked)
+\item lower left: "BAT" and to the right "4112mV" the internal battery voltage, is about 4160mV when fully charged;
+\item lower right: "0" counting from "0" to "5" when in "OFF" position before the SoftRF shuts down
+\end{itemize}
 
 \subsection{Power Chip Reset}\label{power_reset}
 If the operation of the power switch doesn't work as described above, you can reset the power controller chip of the SoftRF by pressing the power switch into "ON" position and hold it here for >8 seconds, then release it to middle position. Then the device is OFF. After that a short press of 2 seconds into "ON" position, it should turn on. If that does not work, check the power supply of the SoftRF, the state of the internal battery, probably best done by the personnel that installed the SoftRF in that aircraft.
@@ -493,9 +521,9 @@ Run an internal battery test:
 
 \begin{itemize}
 \item connect to the status page as described in section \ref{maint_battery}
-\item check https://github.com/astir13/SoftRF\_standalone/wiki/Updates if there is a new Software Version for your device,
+\item check https://github.com/astir13/SoftRF/wiki/Updates if there is a new Software Version for your device,
 \item in case there is a new firmware for your device and you decide the updates are relevant for your use, continue this list:
-\item continue on a PC (Mac, Linux, Windows are ok): download the new firmware for your device from https://github.com/astir13/SoftRF\_standalone/wiki/Updates (you need internet connection for that), be careful to check that the two HW Revisions match the ones on the sticker of your SoftRF (T-Beam and astir13/SoftRF HW revision)
+\item continue on a PC (Mac, Linux, Windows are ok): download the new firmware for your device from https://github.com/astir13/SoftRF/wiki/Updates (you need internet connection for that), be careful to check that the two HW Revisions match the ones on the sticker of your SoftRF (T-Beam and astir13/SoftRF HW revision)
 \item disconnect from the internet WIFI,
 \item connect to the SoftRF WIFI,
 \item open the status page of the SoftRF,
@@ -514,8 +542,12 @@ Run an internal battery test:
 \end{itemize}
 
 \section{Technical Data}
+
+\subsection{Hard- and Software}
+The SoftRF is open source hardware and software. Please find the SoftRF firmware and hardware descriptions at http://github.com/astir13/SoftRF.
+
 \subsection{Transmit Spectral Purity and Power}
-For T-Beam HW revsion 1.1, follwing transmit spectrum was recorded in EU power setting, which shows very good spectral cleanness and power below the maximum allowed +14dBm:
+For T-Beam HW revision 1.1, following transmit spectrum was recorded in EU power setting, which shows very good spectral cleanness and power below the maximum allowed +14dBm:
 
 \begin{figure}[h]
 \centering
