@@ -36,6 +36,13 @@ float Battery_voltage()
   return SoC->Battery_voltage();
 }
 
+float Battery_50perc()
+{
+  return hw_info.model == SOFTRF_MODEL_PRIME_MK2 ||
+         hw_info.model == SOFTRF_MODEL_DONGLE    ?
+                          BATTERY_50_PERC_LIPO : BATTERY_50_PERC_NIMHX2;
+}
+
 /* low battery voltage threshold */
 float Battery_threshold()
 {
