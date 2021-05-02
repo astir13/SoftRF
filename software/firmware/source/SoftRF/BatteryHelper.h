@@ -22,11 +22,14 @@
 #define isTimeToBattery()         (millis() - Battery_TimeMarker > 5000)
 
 #define BATTERY_THRESHOLD_NIMHX2  2.3
-#define BATTERY_THRESHOLD_LIPO    3.5
+#define BATTERY_THRESHOLD_LIPO    3.35
 #define BATTERY_THRESHOLD_LIFE    3.0
 
 #define BATTERY_CUTOFF_NIMHX2     2.1
 #define BATTERY_CUTOFF_LIPO       3.2
+
+#define BATTERY_50_PERC_NIMHX2	  2.5  // needs to be verified
+#define BATTERY_50_PERC_LIPO	  3.7
 
 enum
 {
@@ -37,6 +40,7 @@ enum
 void  Battery_setup(void);
 void  Battery_loop(void);
 float Battery_voltage(void);
+float Battery_50perc(void);
 float Battery_threshold(void);
 float Battery_cutoff(void);
 

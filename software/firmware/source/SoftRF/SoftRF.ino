@@ -269,7 +269,11 @@ void loop()
   Battery_loop();
 
 #if defined (SOFTRF_SHUTDOWN_BAT_NO_MOVE)
-  // shut down after 10 minutes if no external voltage and speed < 10kt
+  // if no external voltage and speed < 10kt:
+  // shut down when battery reaches 50% (ca. 3.7V), but not earlier
+  // than 10 minutes; LiPo/LiIon storage is best done at 50% =>
+  // if shut down for longer periods, use this method to ensure proper
+  // LiIon storage ;-)
   if (isTimeToShutdownBatNoMove()) {
     if (! SoC->onExternalPower() && ThisAircraft.speed < 10) {
       ShutdownBatNoMoveCnt++;
@@ -277,7 +281,9 @@ void loop()
       ShutdownBatNoMoveCnt = 0;
     }
     if (ShutdownBatNoMoveCnt > 10) {
-      shutdown("Pwr Save.");
+      if (Battery_voltage() < Battery_50perc()) {
+        shutdown("Pwr Save.");
+      }
     }
     ShutdownBatNoMove_timeMarker = millis();
   }
