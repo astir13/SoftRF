@@ -16,6 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+ /* Building:
+  *  8. open **SoftRF** sketch from _File_ -> _Open_ menu
+  *  9. Select _Tools_ -> _Board_ ->  _ESP32_ _Dev_ _Module_
+  * 10. Select _Tools_ -> _Flash_ _Mode_ ->  _DIO_
+  * 11. Select _Tools_ -> _Flash_ _Size_ ->  _4MB_
+  * 12. Select _Tools_ -> _Partition_ _Scheme_ ->  _Minimal_ _SPIFFS_
+  * 13. Select _Tools_ -> _Flash_ _Frequency_ ->  _80MHz_
+  * 14. Select _Tools_ -> _CPU_ _Frequency_ ->  _80MHz_
+  * 15. Select _Tools_ -> _PSRAM_ ->  _Enabled_
+  * 16. _Sketch_ -> Export compiled binary
+  */
+
 #ifndef SOFTRF_H
 #define SOFTRF_H
 
@@ -33,7 +45,7 @@
 
 #define SOFTRF_FIRMWARE_VERSION "1.3f"
 #define SOFTRF_IDENT            "SoftRFs-"  // s for standalone fork
-//#define SOFTRF_ADDRESS 0x458C58
+#define SOFTRF_ADDRESS 0x45E127
 //#define SOFTRF_ADDRESS 0xFF50F0
 //#define DO_GNSS_DEBUG
 

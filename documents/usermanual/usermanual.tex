@@ -15,8 +15,8 @@
 \fancyhf{} % remove everything
 \usepackage[left=2.9cm,right=2.9cm,top=2.5cm,bottom=1.5cm]{geometry} % the page margins
 
-\title{\Huge User Manual\\[5mm]\Large SoftRF (Github astir13/SoftRF fork)\\[5mm]matching SoftRF firmware version 1.3e}
-\date{2020-12-31\\[10mm]Thanks to all contributrs of the Github SoftRF Project.\\[3cm]\includegraphics[scale=.4]{softrf.jpg}}
+\title{\Huge User Manual\\[5mm]\Large SoftRF (Github astir13/SoftRF fork)\\[5mm]matching SoftRF firmware version 1.3f}
+\date{2022-03-25\\[10mm]Thanks to all contributrs of the Github SoftRF Project.\\[3cm]\includegraphics[scale=.4]{softrf.jpg}}
 \begin{document}
 % some defines
 \definecolor{lightpink}{RGB}{229,172,197}
@@ -52,7 +52,7 @@
 %	\put(\secondcolumnstart,\the\numexpr\graphheight - 10){\line(0,1){10}}
 %\end{picture}}
 \lhead{astir13/SoftRF}
-\chead{User Manual v.\/1.3e rev.\/1}
+\chead{User Manual v.\/1.3f rev.\/0}
 \rhead{pg. \thepage 		(\pageref{LastPage})}
 \renewcommand{\headwidth}{17cm}
 %\renewcommand{\headrulewidth}{0pt}
@@ -61,6 +61,7 @@
 \begin{versionhistory}
   \vhEntry{1.3e rev. 0}{2020-12-30}{astir13}{created from scratch}
   \vhEntry{1.3e rev. 1}{2020-12-31}{astir13}{editorials, added Display section, added Revision History, corrected links to fork}
+  \vhEntry{1.3f rev. 0}{2022-03-25}{astir13}{autopower off at 50\% battery level, not after 10 minutes}
 \end{versionhistory}
 
 \section{Acronyms}
@@ -438,10 +439,12 @@ To switch OFF your SoftRF in flight, i.e. because you get distracted by too many
 To switch off your SoftRF at the end of the flight:
 \begin{itemize}
 \item switch off the main power supply of the aircraft,
-\item observe the SoftRF to continue operation for the next 10 minutes and then to show down itself automatically (this extends the life of the battery because it is not stored fully charged)
+\item the SoftRF continues operation for some time and shuts down by itself automatically when reaching 50\% battery level (this extends the life of the battery because it is not stored fully charged)
 \end{itemize} 
 
 The auto-shutoff function only happens when the GNSS measured speed is below 10kt for at least 10 minutes while external power is off.
+
+If you know you will use the plane again very soon, use the same procedure as for In-flight switch OFF: set the power switch to OFF, and the battery will stay full.
 
 \subsection{Power outage}
 If the aircraft's main power supply fails during flight, the SoftRF will continue to operate on power provided by the internal battery. The duration of operation depends highly on the charge in the battery, but should last at least for 60 minutes with an external Flarm LED supplied as well.
@@ -471,7 +474,7 @@ Figure \ref{display} shows a typical screen view of the SoftRF display with foll
 \end{itemize}
 
 \subsection{Power Chip Reset}\label{power_reset}
-If the operation of the power switch doesn't work as described above, you can reset the power controller chip of the SoftRF by pressing the power switch into "ON" position and hold it here for >8 seconds, then release it to middle position. Then the device is OFF. After that a short press of 2 seconds into "ON" position, it should turn on. If that does not work, check the power supply of the SoftRF, the state of the internal battery, probably best done by the personnel that installed the SoftRF in that aircraft.
+If the operation of the power switch doesn't work as described above, you can reset the power controller chip of the SoftRF by pressing the power switch into "ON" position and hold it here for longer than 8 seconds, then release it to middle position. Then the device is OFF. After that a short press of 2 seconds into "ON" position, it should turn on. If that does not work, check the power supply of the SoftRF, the state of the internal battery, probably best done by the personnel that installed the SoftRF in that aircraft.
 
 \subsection{Connecting XCSoar via Bluetooth}
 In order to make the widespread soaring app "XCSoar" show you other traffic around your plane on the moving map and the opftional screen "Flarm Radar", please follow following steps:
