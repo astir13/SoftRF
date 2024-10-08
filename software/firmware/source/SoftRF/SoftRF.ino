@@ -431,7 +431,7 @@ void normal()
 
   if (isTimeToExport()) {
     NMEA_Export();
-    GDL90_Export();
+    // GDL90_Export();   GPS data not used in an astir13/SoftRF installation
     D1090_Export();
 
     ExportTimeMarker = millis();
