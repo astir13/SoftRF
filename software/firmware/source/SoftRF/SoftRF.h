@@ -34,7 +34,7 @@
 #endif /* RASPBERRY_PI */
 
 #define SOFTRF_IDENT            "SoftRF"
-#define SOFTRF_FIRMWARE_VERSION "1.5.1a"
+#define SOFTRF_FIRMWARE_VERSION "1.5.2"
 #define SOFTRF_USB_FW_VERSION   0x0105
 #define SOFTRF_ADDRESS			0x45E2B8
 

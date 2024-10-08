@@ -56,6 +56,9 @@ const char *NMEA_CallSign_Prefix[] = {
   [RF_PROTOCOL_ADSL_860]  = "ADL",
 };
 
+#define isTimeToPFLAV() (millis() - PFLAV_TimeMarker > 10000) /* PFLAV all 10 seconds */
+unsigned long PFLAV_TimeMarker = 0;
+
 #define isTimeToPGRMZ() (millis() - PGRMZ_TimeMarker > 1000)
 unsigned long PGRMZ_TimeMarker = 0;
 
@@ -261,6 +264,13 @@ void NMEA_loop()
 #endif /* EXCLUDE_LK8EX1 */
 
     PGRMZ_TimeMarker = millis();
+  }
+
+  if (isTimeToPFLAV()) {
+    snprintf_P(NMEABuffer, sizeof(NMEABuffer), PSTR("$PFLAV,A,2.00,7.24,*")); // FLARM ver. 7.24
+    NMEA_add_checksum(NMEABuffer, sizeof(NMEABuffer) - strlen(NMEABuffer));
+    NMEA_Out(settings->nmea_out, (byte *) NMEABuffer, strlen(NMEABuffer), false);
+    PFLAV_TimeMarker = millis();
   }
 
 #if defined(ENABLE_AHRS)
